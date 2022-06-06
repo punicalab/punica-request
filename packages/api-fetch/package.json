@@ -1,0 +1,41 @@
+{
+  "name": "@punica/request-fetch",
+  "version": "1.0.2",
+  "description": "Request Fetch",
+  "author": {
+    "name": "Uryan Sezgin TEKE",
+    "email": "uryan.sezgin.teke@gmail.com",
+    "url": "https://github.com/uryansezginteke"
+  },
+  "keywords": [
+    "http",
+    "promise",
+    "reflect",
+    "ajax",
+    "fetch"
+  ],
+  "private": false,
+  "license": "ISC",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "url": "git@github.com:uryansezginteke/punica-request.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@punica/request": "^1.0.1"
+  },
+  "scripts": {
+    "build": "scripty",
+    "clean": "scripty",
+    "compile": "scripty"
+  },
+  "scripty": {
+    "path": "../../scripts/packages"
+  }
+}

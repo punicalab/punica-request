@@ -1,0 +1,46 @@
+{
+  "name": "root",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripty": {
+    "path": "./scripts/workspace"
+  },
+  "scripts": {
+    "build": "scripty",
+    "test": "scripty",
+    "up": "scripty",
+    "lerna-version": "scripty",
+    "lerna-publish": "scripty",
+    "commit": "npx git-cz",
+    "test:watch": "jest --onlyChanged --watch",
+    "lint": "eslint . --ext .js,.ts",
+    "lint:fix": "eslint . --ext .js,.ts --fix",
+    "format": "prettier --write \"./**/*.{ts,js,json,md}\"",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-class-properties": "^7.16.7",
+    "@babel/plugin-proposal-decorators": "^7.17.9",
+    "@types/jest": "^27.4.0",
+    "@typescript-eslint/eslint-plugin": "^5.21.0",
+    "@typescript-eslint/parser": "^5.21.0",
+    "commitizen": "^4.2.4",
+    "eslint": "^8.14.0",
+    "husky": "^7.0.4",
+    "jest": "^27.4.7",
+    "lerna": "^4.0.0",
+    "prettier": "^2.6.2",
+    "rimraf": "^3.0.2",
+    "scripty": "^2.1.0",
+    "ts-jest": "^27.1.2",
+    "typescript": "^4.5.4"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  },
+  "version": "0.0.0"
+}

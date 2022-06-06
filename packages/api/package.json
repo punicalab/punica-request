@@ -1,0 +1,39 @@
+{
+  "name": "@punica/request",
+  "version": "1.0.1",
+  "description": "Request Library",
+  "author": {
+    "name": "Uryan Sezgin TEKE",
+    "email": "uryan.sezgin.teke@gmail.com",
+    "url": "https://github.com/uryansezginteke"
+  },
+  "keywords": [
+    "http",
+    "promise",
+    "reflect",
+    "ajax",
+    "fetch",
+    "xhr"
+  ],
+  "private": false,
+  "license": "ISC",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "url": "git@github.com:uryansezginteke/punica-request.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "scripty",
+    "clean": "scripty",
+    "compile": "scripty"
+  },
+  "scripty": {
+    "path": "../../scripts/packages"
+  }
+}
