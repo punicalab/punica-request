@@ -1,4 +1,4 @@
-import { BaseMiddleware, ProcessData } from '../models/middleware';
+import { BaseMiddleware, ProcessData } from '../model/middleware';
 
 class MainMiddleware extends BaseMiddleware {
   private _apiMethod: any;
@@ -25,6 +25,10 @@ class MainMiddleware extends BaseMiddleware {
       .apply(this._target, [data.params])
       .then(async (response: Response) => {
         data.response = response;
+        data.body = await this._target.readResponse(
+          data.response,
+          data.params.contentType
+        );
 
         this.next(data);
       });

@@ -1,4 +1,4 @@
-import { IConfig, RequestAPI } from '../lib';
+import { IConfig, RequestAPI } from '../..';
 import { RequestSample } from './api';
 
 describe('create control', () => {

@@ -1,4 +1,4 @@
-import { RequestAPI } from '../lib';
+import { RequestAPI } from '../..';
 
 describe('import control', () => {
   test('import class', () => {

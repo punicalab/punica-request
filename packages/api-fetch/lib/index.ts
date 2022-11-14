@@ -3,7 +3,8 @@ import {
   IRequest,
   IConfig,
   mergeConfig,
-  getUrlParam
+  getUrlParam,
+  ContentType
 } from '@punica/request';
 
 export class APIFetch implements IRequest {
@@ -94,5 +95,24 @@ export class APIFetch implements IRequest {
     });
 
     return response;
+  }
+
+  /**
+   *
+   * @param response
+   * @param contentType
+   * @returns
+   */
+  public readResponse(
+    response: Response,
+    contentType: ContentType
+  ): Promise<unknown> {
+    return new Promise((resolve) => {
+      if (contentType !== null) {
+        resolve(response[contentType || 'json']());
+      }
+
+      return null;
+    });
   }
 }
