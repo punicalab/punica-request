@@ -1,4 +1,4 @@
-import { BaseMiddleware, ProcessData } from '../../lib';
+import { BaseMiddleware, ProcessData } from '../../..';
 
 class SampleBMiddleware extends BaseMiddleware {
   /**

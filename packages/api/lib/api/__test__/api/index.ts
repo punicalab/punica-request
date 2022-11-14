@@ -1,4 +1,4 @@
-import { IRequestParams, IConfig, IRequest } from '../../lib';
+import { IRequestParams, IConfig, IRequest } from '../../..';
 
 export class RequestSample implements IRequest {
   private _config: IConfig;
@@ -17,8 +17,8 @@ export class RequestSample implements IRequest {
 
   /**
    *
-   * @param url
-   * @param data
+   * @param params
+   * @returns
    */
   public async get<T = any, R = any>(params: IRequestParams<T>): Promise<R> {
     return new Promise<R>((resolve, reject) => {
@@ -44,8 +44,8 @@ export class RequestSample implements IRequest {
 
   /**
    *
-   * @param url
-   * @param data
+   * @param params
+   * @returns
    */
   public async delete<T = any, R = any>(params: IRequestParams<T>): Promise<R> {
     return new Promise<R>((resolve, reject) => {
@@ -71,8 +71,8 @@ export class RequestSample implements IRequest {
 
   /**
    *
-   * @param url
-   * @param data
+   * @param params
+   * @returns
    */
   public async post<T = any, R = any>(params: IRequestParams<T>): Promise<R> {
     return new Promise<R>((resolve, reject) => {
@@ -98,8 +98,8 @@ export class RequestSample implements IRequest {
 
   /**
    *
-   * @param url
-   * @param data
+   * @param params
+   * @returns
    */
   public async put<T = any, R = any>(params: IRequestParams<T>): Promise<R> {
     return new Promise<R>((resolve, reject) => {
@@ -121,6 +121,17 @@ export class RequestSample implements IRequest {
       }
 
       reject(new Error('error'));
+    });
+  }
+
+  /**
+   *
+   * @param response
+   * @returns
+   */
+  public readResponse(response: Response): Promise<unknown> {
+    return new Promise((resolve) => {
+      resolve(response['json']());
     });
   }
 }

@@ -28,11 +28,11 @@ const Middleware: MethodDecorator = (
           init: params.init || {}
         }
       };
-      const middlewareList: Array<BaseMiddleware> = [].concat(
-        requestMiddleware,
-        [mainMiddleware],
-        responseMiddleware
-      );
+      const middlewareList: Array<BaseMiddleware> = [
+        ...requestMiddleware,
+        mainMiddleware,
+        ...responseMiddleware
+      ];
 
       middlewareList.reduce((previous, current) => {
         if (previous) {

@@ -1,4 +1,4 @@
-import { IConfig, RequestAPI } from '../lib';
+import { IConfig, RequestAPI } from '../..';
 import { RequestSample } from './api';
 import {
   SampleAMiddleware,
@@ -7,6 +7,9 @@ import {
 } from './middleware';
 
 describe('api sample', () => {
+  let request: RequestAPI;
+  let api: RequestSample;
+
   const sampleAMiddleware = new SampleAMiddleware();
   const sampleBMiddleware = new SampleBMiddleware();
   const sampleCMiddleware = new SampleCMiddleware();
@@ -18,15 +21,12 @@ describe('api sample', () => {
     }
   };
 
-  let request: RequestAPI = null;
-  let api: RequestSample = null;
-
   beforeAll(() => {
     api = new RequestSample();
     request = new RequestAPI(api, config);
   });
 
-  test('get', () => {
+  test('get', async () => {
     return request
       .get({ url: 'url', urlParams: { data: 5 } })
       .then(async (res) => {
@@ -37,7 +37,7 @@ describe('api sample', () => {
       });
   });
 
-  test('delete', () => {
+  test('delete', async () => {
     return request
       .delete({ url: 'url', urlParams: { data: 5 } })
       .then(async (res) => await res.json())
@@ -46,7 +46,7 @@ describe('api sample', () => {
       });
   });
 
-  test('post', () => {
+  test('post', async () => {
     return request
       .post({ url: 'url', data: { data: 5 } })
       .then(async (res) => await res.json())
@@ -55,7 +55,7 @@ describe('api sample', () => {
       });
   });
 
-  test('put', () => {
+  test('put', async () => {
     return request
       .put({ url: 'url', data: { data: 5 } })
       .then(async (res) => await res.json())

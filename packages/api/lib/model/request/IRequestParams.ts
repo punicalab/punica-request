@@ -1,3 +1,4 @@
+import { ContentType } from '../content';
 import { IParams } from '../params';
 
 interface IRequestParams<T> {
@@ -5,6 +6,7 @@ interface IRequestParams<T> {
   urlParams?: IParams;
   data?: T;
   init?: RequestInit;
+  contentType?: ContentType;
 }
 
 export default IRequestParams;
