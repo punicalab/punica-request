@@ -1,16 +1,17 @@
 name: Node.js Package
 
 on:
-  push:
+  pull_request:
     branches:
-      - develop
+      - main
+    types: [closed]
 
 jobs:
 
   release:
     strategy:
       matrix:
-        node-version: [14.x]
+        node-version: [18.x]
     runs-on: ubuntu-latest
 
     env:
