@@ -3,8 +3,8 @@ import {
   IRequest,
   IConfig,
   mergeConfig,
-  getUrlParam,
-  ContentType
+  ContentType,
+  HTTP_METHOD_TYPE
 } from '@punica/request';
 
 export class APIFetch implements IRequest {
@@ -30,7 +30,7 @@ export class APIFetch implements IRequest {
 
     const response: any = await fetch(url, {
       ...config,
-      method: 'GET'
+      method: HTTP_METHOD_TYPE.GET
     });
 
     return response;
@@ -49,7 +49,7 @@ export class APIFetch implements IRequest {
 
     const response: any = await fetch(url, {
       ...config,
-      method: 'DELETE'
+      method: HTTP_METHOD_TYPE.DELETE
     });
 
     return response;
@@ -68,7 +68,7 @@ export class APIFetch implements IRequest {
     const response: any = await fetch(url, {
       ...config,
       body: data,
-      method: 'POST'
+      method: HTTP_METHOD_TYPE.POST
     });
 
     return response;
@@ -88,7 +88,7 @@ export class APIFetch implements IRequest {
     const response: any = await fetch(url, {
       ...config,
       body: data,
-      method: 'PUT'
+      method: HTTP_METHOD_TYPE.PUT
     });
 
     return response;
