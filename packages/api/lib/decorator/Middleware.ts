@@ -1,4 +1,4 @@
-import { MainMiddleware, BaseMiddleware } from '..';
+import { MainMiddleware, BaseMiddleware, getUrlParam } from '..';
 
 /**
  *
@@ -11,20 +11,28 @@ const Middleware: MethodDecorator = (
   propertyKey: string | symbol,
   descriptor: any
 ) => {
-  const originalValue = descriptor.value;
+  const originalMethod = descriptor.value;
 
   descriptor.value = function (...args: any[]) {
     return new Promise((resolve, reject) => {
-      const { config } = this;
       const params = args[0];
-      const requestMiddleware = [...(config?.middleware?.request || [])];
-      const responseMiddleware = [...(config?.middleware?.response || [])];
-      const mainMiddleware = new MainMiddleware(originalValue, this);
+      const { config } = this;
+      const { middleware, request } = config;
+
+      const requestMiddleware = [...(middleware?.request || [])];
+      const responseMiddleware = [...(middleware?.response || [])];
+      const url = `${request.baseURL}${params.url}${getUrlParam(
+        params.urlParams
+      )}`;
+      const mainMiddleware = new MainMiddleware(originalMethod, this);
+
       const data = {
+        config,
         resolve,
         reject,
         params: {
           ...params,
+          url,
           init: params.init || {}
         }
       };

@@ -14,7 +14,7 @@ describe('api sample', () => {
   const sampleBMiddleware = new SampleBMiddleware();
   const sampleCMiddleware = new SampleCMiddleware();
   const config: IConfig = {
-    request: { baseURL: '' },
+    request: { baseURL: 'http://host:port/api/' },
     middleware: {
       request: [sampleBMiddleware, sampleAMiddleware],
       response: [sampleCMiddleware]
@@ -27,40 +27,28 @@ describe('api sample', () => {
   });
 
   test('get', async () => {
-    return request
-      .get({ url: 'url', urlParams: { data: 5 } })
-      .then(async (res) => {
-        return await res.json();
-      })
-      .then((d) => {
-        expect(d).toEqual({ data: 5 });
-      });
+    return request.get({ url: 'url', urlParams: { data: 5 } }).then((d) => {
+      expect(d).toEqual({ data: 5 });
+    });
   });
 
   test('delete', async () => {
-    return request
-      .delete({ url: 'url', urlParams: { data: 5 } })
-      .then(async (res) => await res.json())
-      .then((d) => {
-        expect(d).toEqual({ data: 5 });
-      });
+    return request.delete({ url: 'url', urlParams: { data: 5 } }).then((d) => {
+      expect(d).toEqual({ data: 5 });
+    });
   });
 
   test('post', async () => {
-    return request
-      .post({ url: 'url', data: { data: 5 } })
-      .then(async (res) => await res.json())
-      .then((d) => {
-        expect(d).toEqual({ data: 5 });
-      });
+    return request.post({ url: 'url', data: { data: 5 } }).then((d) => {
+      expect(d).toEqual({ data: 5 });
+    });
   });
 
   test('put', async () => {
-    return request
-      .put({ url: 'url', data: { data: 5 } })
-      .then(async (res) => await res.json())
-      .then((d) => {
-        expect(d).toEqual({ data: 5 });
-      });
+    return request.put({ url: 'url', data: { data: 5 } }).then((d) => {
+      expect(d).toEqual({ data: 5 });
+    });
   });
+
+  test.todo('send operation');
 });

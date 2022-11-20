@@ -27,7 +27,7 @@ export default class ErrorMiddleware extends BaseMiddleware {
     } else {
       const errorHandler = this.errors[status];
 
-      errorHandler(data).then(() => {
+      errorHandler(data).finally(() => {
         data.reject();
       });
     }
