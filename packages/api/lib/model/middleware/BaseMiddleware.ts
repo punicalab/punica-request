@@ -26,7 +26,7 @@ abstract class BaseMiddleware implements IMiddleware {
       return;
     }
 
-    data.resolve(data.response);
+    data.resolve(data.body);
   }
 
   /**

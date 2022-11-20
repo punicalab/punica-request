@@ -23,17 +23,15 @@ export class APIFetch implements IRequest {
    * @returns
    */
   public async get<T = any, R = any>(params: IRequestParams<T>): Promise<R> {
-    const { init, url, urlParams } = params;
+    const { init, url } = params;
     const { request } = this._config;
-    const { requestInit, baseURL } = request;
+    const { requestInit } = request;
     const config = mergeConfig(requestInit, init);
-    const response: any = await fetch(
-      `${baseURL}${url}${getUrlParam(urlParams)}`,
-      {
-        ...config,
-        method: 'GET'
-      }
-    );
+
+    const response: any = await fetch(url, {
+      ...config,
+      method: 'GET'
+    });
 
     return response;
   }
@@ -44,17 +42,15 @@ export class APIFetch implements IRequest {
    * @returns
    */
   public async delete<T = any, R = any>(params: IRequestParams<T>): Promise<R> {
-    const { init, url, urlParams } = params;
+    const { init, url } = params;
     const { request } = this._config;
-    const { requestInit, baseURL } = request;
+    const { requestInit } = request;
     const config = mergeConfig(requestInit, init);
-    const response: any = await fetch(
-      `${baseURL}${url}${getUrlParam(urlParams)}`,
-      {
-        ...config,
-        method: 'DELETE'
-      }
-    );
+
+    const response: any = await fetch(url, {
+      ...config,
+      method: 'DELETE'
+    });
 
     return response;
   }
@@ -67,9 +63,9 @@ export class APIFetch implements IRequest {
   public async post<T = any, R = any>(params: IRequestParams<T>): Promise<R> {
     const { init, url, data } = params;
     const { request } = this._config;
-    const { requestInit, baseURL } = request;
+    const { requestInit } = request;
     const config = mergeConfig(requestInit, init);
-    const response: any = await fetch(`${baseURL}${url}`, {
+    const response: any = await fetch(url, {
       ...config,
       body: data,
       method: 'POST'
@@ -86,9 +82,10 @@ export class APIFetch implements IRequest {
   public async put<T = any, R = any>(params: IRequestParams<T>): Promise<R> {
     const { init, url, data } = params;
     const { request } = this._config;
-    const { requestInit, baseURL } = request;
+    const { requestInit } = request;
     const config = mergeConfig(requestInit, init);
-    const response: any = await fetch(`${baseURL}${url}`, {
+
+    const response: any = await fetch(url, {
       ...config,
       body: data,
       method: 'PUT'
