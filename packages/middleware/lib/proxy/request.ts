@@ -1,4 +1,4 @@
-import { BaseMiddleware, ProcessData } from '@punica/request';
+import { BaseMiddleware, HTTP_METHOD_TYPE, ProcessData } from '@punica/request';
 import { OperationDatabase } from './database';
 import { getOperation } from './util/getOperation';
 
@@ -8,6 +8,14 @@ export default class ProxyRequestMiddleware extends BaseMiddleware {
    */
   constructor() {
     super();
+  }
+
+  /**
+   *
+   * @returns
+   */
+  public availableMethods(): Array<string> {
+    return [HTTP_METHOD_TYPE.GET];
   }
 
   /**
