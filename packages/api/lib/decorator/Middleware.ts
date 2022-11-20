@@ -1,4 +1,5 @@
 import { MainMiddleware, BaseMiddleware, getUrlParam } from '..';
+import availableMiddlewareMethods from '../utils/availableMiddlewareMethods';
 
 /**
  *
@@ -18,13 +19,18 @@ const Middleware: MethodDecorator = (
       const params = args[0];
       const { config } = this;
       const { middleware, request } = config;
-
-      const requestMiddleware = [...(middleware?.request || [])];
-      const responseMiddleware = [...(middleware?.response || [])];
+      const mainMiddleware = new MainMiddleware(originalMethod, this);
+      const requestMiddleware = availableMiddlewareMethods(
+        originalMethod.name,
+        middleware?.request
+      );
+      const responseMiddleware = availableMiddlewareMethods(
+        originalMethod.name,
+        middleware?.response
+      );
       const url = `${request.baseURL}${params.url}${getUrlParam(
         params.urlParams
       )}`;
-      const mainMiddleware = new MainMiddleware(originalMethod, this);
 
       const data = {
         config,
