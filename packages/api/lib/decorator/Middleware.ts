@@ -28,7 +28,7 @@ const Middleware: MethodDecorator = (
         originalMethod.name,
         middleware?.response
       );
-      const url = `${request.baseURL}${params.url}${getUrlParam(
+      const url = `${request.baseURL}${params.url || ''}${getUrlParam(
         params.urlParams
       )}`;
 
