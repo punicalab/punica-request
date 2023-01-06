@@ -109,7 +109,7 @@ export class APIFetch implements IRequest {
         resolve(response[contentType || 'json']());
       }
 
-      return null;
+      resolve(null);
     });
   }
 }
