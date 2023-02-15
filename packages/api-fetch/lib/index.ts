@@ -105,8 +105,10 @@ export class APIFetch implements IRequest {
     contentType: ContentType
   ): Promise<unknown> {
     return new Promise((resolve) => {
-      if (contentType != null) {
-        resolve(response[contentType || 'json']());
+      if (contentType) {
+        resolve(response[contentType]());
+      }else{
+        resolve(null)
       }
 
       resolve(null);
