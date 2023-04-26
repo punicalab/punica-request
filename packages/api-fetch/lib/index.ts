@@ -23,13 +23,14 @@ export class APIFetch implements IRequest {
    * @returns
    */
   public async get<T = any, R = any>(params: IRequestParams<T>): Promise<R> {
-    const { init, url } = params;
+    const { init, url, data } = params;
     const { request } = this._config;
     const { requestInit } = request;
     const config = mergeConfig(requestInit, init);
 
     const response: any = await fetch(url, {
       ...config,
+      body: data,
       method: HTTP_METHOD_TYPE.GET
     });
 
@@ -42,13 +43,14 @@ export class APIFetch implements IRequest {
    * @returns
    */
   public async delete<T = any, R = any>(params: IRequestParams<T>): Promise<R> {
-    const { init, url } = params;
+    const { init, url, data } = params;
     const { request } = this._config;
     const { requestInit } = request;
     const config = mergeConfig(requestInit, init);
 
     const response: any = await fetch(url, {
       ...config,
+      body: data,
       method: HTTP_METHOD_TYPE.DELETE
     });
 
