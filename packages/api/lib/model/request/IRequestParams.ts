@@ -7,6 +7,7 @@ interface IRequestParams<T> {
   data?: T;
   init?: RequestInit;
   contentType?: ContentType;
+  //add custom variable
   [key: string]: any
 }
 
