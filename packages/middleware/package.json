@@ -1,6 +1,6 @@
 {
   "name": "@punica/request-middleware",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Request Middleware",
   "author": {
     "name": "Uryan Sezgin TEKE",
@@ -29,7 +29,7 @@
     "dist"
   ],
   "dependencies": {
-    "@punica/request": "^1.0.5"
+    "@punica/request": "^1.0.6"
   },
   "scripts": {
     "build": "scripty",
