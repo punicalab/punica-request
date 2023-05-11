@@ -53,6 +53,8 @@ const Middleware: MethodDecorator = (
           previous.nextMiddleware = current;
         }
 
+        current.nextMiddleware = null;
+        
         return current;
       }, null);
 
