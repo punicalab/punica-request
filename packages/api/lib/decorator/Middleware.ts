@@ -24,10 +24,12 @@ const Middleware: MethodDecorator = (
         originalMethod.name,
         middleware?.request
       );
+
       const responseMiddleware = availableMiddlewareMethods(
         originalMethod.name,
         middleware?.response
       );
+
       const url = `${request.baseURL}${params.url || ''}${getUrlParam(
         params.urlParams
       )}`;
@@ -42,23 +44,27 @@ const Middleware: MethodDecorator = (
           init: params.init || {}
         }
       };
+
       const middlewareList: Array<BaseMiddleware> = [
         ...requestMiddleware,
         mainMiddleware,
         ...responseMiddleware
       ];
 
+      const firstMiddleware = middlewareList[0];
+
       middlewareList.reduce((previous, current) => {
         if (previous) {
           previous.nextMiddleware = current;
         }
 
+        current.firstMiddleware = firstMiddleware;
         current.nextMiddleware = null;
-        
+
         return current;
       }, null);
 
-      middlewareList[0].process(data);
+      firstMiddleware.startProcess(data);
     });
   };
 };
