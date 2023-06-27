@@ -3,6 +3,8 @@ import { HTTP_METHOD_TYPE } from '..';
 
 abstract class BaseMiddleware implements IMiddleware {
   private _nextMiddleware: IMiddleware;
+  private _firstMiddleware: IMiddleware;
+  
 
   /**
    *
@@ -18,6 +20,13 @@ abstract class BaseMiddleware implements IMiddleware {
 
   /**
    *
+   */
+  public set firstMiddleware(m: IMiddleware) {
+    this._firstMiddleware = m;
+  }
+
+  /**
+   *
    * @param data
    */
   public next(data: ProcessData) {
@@ -28,6 +37,14 @@ abstract class BaseMiddleware implements IMiddleware {
     }
 
     data.resolve(data.body);
+  }
+
+  /**
+   * 
+   * @param data 
+   */
+  public startProcess(data: ProcessData) {
+    this._firstMiddleware.process(data);
   }
 
   /**
