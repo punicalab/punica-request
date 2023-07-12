@@ -17,19 +17,28 @@ export default class ErrorMiddleware extends BaseMiddleware {
    *
    * @param data
    */
-  public process = (data: ProcessData) => {
+  public process = async (data: ProcessData) => {
     const { status } = data.response;
 
-    if (status < 400 && status >= 300) {
-      this.next(data);
-    } else if (status < 300 && status >= 200) {
+    if (status < 400 && status >= 200) {
       this.next(data);
     } else {
+      const { response, reject } = data;
+      const { json } = response;
       const errorHandler = this.errors[status];
 
-      errorHandler(data).finally(() => {
-        data.reject();
-      });
+      if (errorHandler) {
+        data.body = await json();
+
+        errorHandler(data).finally(() => {
+          reject();
+        });
+      } else {
+        console.error(
+          '%cPUNICA_REQUEST You should add the error message handler!',
+          'background-color: red; color: white; padding: 12px'
+        );
+      }
     }
   };
 }

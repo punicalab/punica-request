@@ -25,10 +25,13 @@ class MainMiddleware extends BaseMiddleware {
       .apply(this._target, [data.params])
       .then(async (response: Response) => {
         data.response = response;
-        data.body = await this._target.readResponse(
-          data.response,
-          data.params.contentType
-        );
+
+        if (response.status < 400 && response.status >= 200) {
+          data.body = await this._target.readResponse(
+            data.response,
+            data.params.contentType
+          );
+        }
 
         this.next(data);
       });
