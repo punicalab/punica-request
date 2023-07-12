@@ -26,6 +26,7 @@ export class RequestSample implements IRequest {
         const res: any = params.urlParams;
 
         resolve({
+          status: 200,
           headers: {
             get() {
               return 'application/json; charset=utf-8';
@@ -53,6 +54,7 @@ export class RequestSample implements IRequest {
         const res: any = params.urlParams;
 
         resolve({
+          status: 200,
           headers: {
             get() {
               return 'application/json; charset=utf-8';
@@ -80,6 +82,7 @@ export class RequestSample implements IRequest {
         const res: any = params.data;
 
         resolve({
+          status: 200,
           headers: {
             get() {
               return 'application/json; charset=utf-8';
@@ -107,6 +110,7 @@ export class RequestSample implements IRequest {
         const res: any = params.data;
 
         resolve({
+          status: 200,
           headers: {
             get() {
               return 'application/json; charset=utf-8';

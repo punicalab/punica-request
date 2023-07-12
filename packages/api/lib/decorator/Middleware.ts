@@ -1,5 +1,5 @@
 import { MainMiddleware, BaseMiddleware, getUrlParam } from '..';
-import availableMiddlewareMethods from '../utils/availableMiddlewareMethods';
+import { availableMiddlewareMethods } from '../utils';
 
 /**
  *
