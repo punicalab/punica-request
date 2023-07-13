@@ -27,12 +27,16 @@ export default class ErrorMiddleware extends BaseMiddleware {
       const errorHandler = this.errors[status];
 
       if (errorHandler) {
-        response.json().then((content)=>{
-          data.body = content
-          errorHandler(data).finally(() => {
-            reject();
+        response
+          .json()
+          .then((content) => {
+            data.body = content;
+          })
+          .finally(() => {
+            errorHandler(data).finally(() => {
+              reject();
+            });
           });
-        });
       } else {
         console.error(
           '%cPUNICA_REQUEST You should add the error message handler!',
