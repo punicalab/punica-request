@@ -24,11 +24,10 @@ export default class ErrorMiddleware extends BaseMiddleware {
       this.next(data);
     } else {
       const { response, reject } = data;
-      const { json } = response;
       const errorHandler = this.errors[status];
 
       if (errorHandler) {
-        data.body = await json();
+        data.body = await response.json();
 
         errorHandler(data).finally(() => {
           reject();
