@@ -1,52 +1,58 @@
-import { BaseMiddleware, ProcessData } from '@punica/request';
+import { BaseMiddleware, ContentType, ProcessData } from '@punica/request';
 
 export default class ErrorMiddleware extends BaseMiddleware {
-  private errors: ErrorMiddlewareConfig;
+  private config: ErrorMiddlewareConfig;
 
   /**
    *
    * @param errors
    */
-  constructor(errors: ErrorMiddlewareConfig) {
+  constructor(config: ErrorMiddlewareConfig) {
     super();
 
-    this.errors = errors;
+    this.config = config;
   }
 
   /**
    *
    * @param data
    */
-  public process = async (data: ProcessData) => {
-    const { status } = data.response;
+  public process = (data: ProcessData) => {
+    const { response, reject } = data;
+    const { status } = response;
+    const { error, contentType } = this.config;
+    const errorHandler = error[status];
 
     if (status < 400 && status >= 200) {
       this.next(data);
-    } else {
-      const { response, reject } = data;
-      const errorHandler = this.errors[status];
 
-      if (errorHandler) {
-        response
-          .json()
-          .then((content) => {
-            data.body = content;
-          })
-          .finally(() => {
-            errorHandler(data).finally(() => {
-              reject();
-            });
-          });
-      } else {
-        console.error(
-          '%cPUNICA_REQUEST You should add the error message handler!',
-          'background-color: red; color: white; padding: 12px'
-        );
-      }
+      return;
+    }
+
+    if (errorHandler == null) {
+      console.error(
+        '%cPUNICA_REQUEST You should add the error message handler!',
+        'background-color: red; color: white; padding: 12px'
+      );
+
+      reject();
+
+      return;
+    }
+
+    try {
+      response[contentType]().then((content) => {
+        data.body = content;
+      });
+    } finally {
+      errorHandler(data).finally(() => {
+        reject();
+      });
     }
   };
 }
 
 export type ErrorMiddlewareConfig = {
-  [key in number]: (data: ProcessData) => Promise<void>;
+  contentType: ContentType;
+  error: { [key in number]: (data: ProcessData) => Promise<void> };
 };
