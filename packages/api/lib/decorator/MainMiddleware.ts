@@ -26,7 +26,7 @@ class MainMiddleware extends BaseMiddleware {
       .then(async (response: Response) => {
         data.response = response;
 
-        if (response.status < 400 && response.status >= 200) {
+        if (response.ok) {
           data.body = await this._target.readResponse(
             data.response,
             data.params.contentType
