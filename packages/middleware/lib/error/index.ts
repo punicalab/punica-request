@@ -19,11 +19,11 @@ export default class ErrorMiddleware extends BaseMiddleware {
    */
   public process = (data: ProcessData) => {
     const { response, reject } = data;
-    const { status } = response;
+    const { status, ok } = response;
     const { error, contentType } = this.config;
     const errorHandler = error[status];
 
-    if (status < 400 && status >= 200) {
+    if (ok) {
       this.next(data);
 
       return;
@@ -41,10 +41,14 @@ export default class ErrorMiddleware extends BaseMiddleware {
     }
 
     try {
-      response[contentType]().then((content) => {
+      data.response[contentType]().then((content) => {
         data.body = content;
+
+        errorHandler(data).finally(() => {
+          reject();
+        });
       });
-    } finally {
+    } catch (error) {
       errorHandler(data).finally(() => {
         reject();
       });
