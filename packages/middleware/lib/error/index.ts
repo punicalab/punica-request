@@ -15,6 +15,17 @@ export default class ErrorMiddleware extends BaseMiddleware {
 
   /**
    *
+   * @param message
+   */
+  private LOGGER = (message: string) => {
+    console.error(
+      `%cPUNICA_ERROR_MIDDLEWARE ${message}`,
+      'background-color: red; color: white; padding: 12px'
+    );
+  };
+
+  /**
+   *
    * @param data
    */
   public process = (data: ProcessData) => {
@@ -30,29 +41,27 @@ export default class ErrorMiddleware extends BaseMiddleware {
     }
 
     if (errorHandler == null) {
-      console.error(
-        '%cPUNICA_REQUEST You should add the error message handler!',
-        'background-color: red; color: white; padding: 12px'
-      );
+      this.LOGGER('You should add the error message handler!');
 
-      reject();
+      reject(data);
 
       return;
     }
 
-    try {
-      data.response[contentType]().then((content) => {
+    data.response[contentType]()
+      .then((content) => {
         data.body = content;
-
+      })
+      .catch(() => {
+        this.LOGGER(
+          'Received read error for requested content type from operation response'
+        );
+      })
+      .finally(() => {
         errorHandler(data).finally(() => {
-          reject();
+          reject(data);
         });
       });
-    } catch (error) {
-      errorHandler(data).finally(() => {
-        reject();
-      });
-    }
   };
 }
 
