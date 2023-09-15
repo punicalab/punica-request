@@ -1,4 +1,5 @@
-import { BaseMiddleware, ProcessData } from '../model/middleware';
+import { ProcessData } from '..';
+import { BaseMiddleware } from '.';
 
 class MainMiddleware extends BaseMiddleware {
   private _apiMethod: any;
@@ -18,22 +19,22 @@ class MainMiddleware extends BaseMiddleware {
 
   /**
    *
-   * @param data
+   * @param processData
    */
-  public process(data: ProcessData): void {
+  public process(processData: ProcessData): void {
     this._apiMethod
-      .apply(this._target, [data.params])
+      .apply(this._target, [processData.params])
       .then(async (response: Response) => {
-        data.response = response;
+        processData.response = response;
 
         if (response.ok) {
-          data.body = await this._target.readResponse(
-            data.response,
-            data.params.contentType
+          processData.body = await this._target.readResponse(
+            processData.response,
+            processData.params.contentType
           );
         }
 
-        this.next(data);
+        this.next(processData);
       });
   }
 }

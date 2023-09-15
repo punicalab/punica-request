@@ -1,10 +1,12 @@
-export type IndexedDBConection = {
-  db: any;
-  databaseName: string;
-  indexName: string;
-};
+import { ContentType } from '@punica/request';
 
-export type Record = {
-  url: string;
-  result: any;
-};
+interface IStorage {
+  read: (requestURL: string) => Promise<any>;
+  write: (
+    requestURL: string,
+    contentType: ContentType,
+    body: unknown
+  ) => Promise<any>;
+}
+
+export { IStorage };

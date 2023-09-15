@@ -1,4 +1,4 @@
-import { OBJECT_STORE } from "../constants";
+import { OBJECT_STORE } from '../constants';
 
 /**
  *
@@ -11,7 +11,7 @@ export const deleteContact = (
   id: string
 ): Promise<boolean> => {
   return new Promise((resolve, reject) => {
-    const txn = db.transaction(OBJECT_STORE, "readwrite");
+    const txn = db.transaction(OBJECT_STORE, 'readwrite');
     const store = txn.objectStore(OBJECT_STORE);
     const query = store.delete(id);
 

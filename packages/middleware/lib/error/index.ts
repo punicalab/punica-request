@@ -26,31 +26,32 @@ export default class ErrorMiddleware extends BaseMiddleware {
 
   /**
    *
-   * @param data
+   * @param processData
    */
-  public process = (data: ProcessData) => {
-    const { response, reject } = data;
+  public process = (processData: ProcessData) => {
+    const { response, reject } = processData;
     const { status, ok } = response;
-    const { error, contentType } = this.config;
-    const errorHandler = error[status];
 
     if (ok) {
-      this.next(data);
+      this.next(processData);
 
       return;
     }
+
+    const { error, contentType } = this.config;
+    const errorHandler = error[status];
 
     if (errorHandler == null) {
       this.LOGGER('You should add the error message handler!');
 
-      reject(data);
+      reject(processData);
 
       return;
     }
 
-    data.response[contentType]()
+    processData.response[contentType]()
       .then((content) => {
-        data.body = content;
+        processData.body = content;
       })
       .catch(() => {
         this.LOGGER(
@@ -58,8 +59,8 @@ export default class ErrorMiddleware extends BaseMiddleware {
         );
       })
       .finally(() => {
-        errorHandler(data).finally(() => {
-          reject(data);
+        errorHandler(processData).finally(() => {
+          reject(processData);
         });
       });
   };
@@ -67,5 +68,5 @@ export default class ErrorMiddleware extends BaseMiddleware {
 
 export type ErrorMiddlewareConfig = {
   contentType: ContentType;
-  error: { [key in number]: (data: ProcessData) => Promise<void> };
+  error: Record<number, (data: ProcessData) => Promise<void>>;
 };

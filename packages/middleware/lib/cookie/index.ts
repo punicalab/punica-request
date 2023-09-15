@@ -1,13 +1,13 @@
 import { BaseMiddleware, getCookie, ProcessData } from '@punica/request';
 
-export default class AuthMiddleware extends BaseMiddleware {
-  private _config: AuthMiddlewareConfig;
+export default class CookieMiddleware extends BaseMiddleware {
+  private _config: CookieMiddlewareConfig;
 
   /**
    *
    * @param config
    */
-  constructor(config: AuthMiddlewareConfig) {
+  constructor(config: CookieMiddlewareConfig) {
     super();
 
     this._config = config;
@@ -25,7 +25,7 @@ export default class AuthMiddleware extends BaseMiddleware {
     if (Boolean(cookieValue)) {
       params.init.headers = {
         ...params.init.headers,
-        [headerName]: `Bearer ${cookieValue} `
+        [headerName]: cookieValue
       };
     }
 
@@ -33,7 +33,7 @@ export default class AuthMiddleware extends BaseMiddleware {
   };
 }
 
-type AuthMiddlewareConfig = {
+type CookieMiddlewareConfig = {
   cookieName: string;
   headerName: string;
 };

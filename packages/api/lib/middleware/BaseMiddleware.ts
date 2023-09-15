@@ -1,10 +1,8 @@
-import { IMiddleware, ProcessData } from '.';
-import { HTTP_METHOD_TYPE } from '..';
+import { IMiddleware, ProcessData, RequestMethods } from '..';
 
 abstract class BaseMiddleware implements IMiddleware {
   private _nextMiddleware: IMiddleware;
-  private _firstMiddleware: IMiddleware;
-  
+  protected _firstMiddleware: IMiddleware;
 
   /**
    *
@@ -40,31 +38,18 @@ abstract class BaseMiddleware implements IMiddleware {
   }
 
   /**
-   * 
-   * @param data 
-   */
-  public startProcess(data: ProcessData) {
-    this._firstMiddleware.process(data);
-  }
-
-  /**
    *
    * @returns
    */
-  public availableMethods(): Array<string> {
-    return [
-      HTTP_METHOD_TYPE.GET,
-      HTTP_METHOD_TYPE.POST,
-      HTTP_METHOD_TYPE.PUT,
-      HTTP_METHOD_TYPE.DELETE
-    ];
+  public availableMethods(): Array<keyof RequestMethods> {
+    return ['GET', 'POST', 'PUT', 'DELETE'];
   }
 
   /**
    *
-   * @param data
+   * @param processData
    */
-  abstract process(data: ProcessData): void;
+  abstract process(processData: ProcessData): void;
 }
 
 export default BaseMiddleware;

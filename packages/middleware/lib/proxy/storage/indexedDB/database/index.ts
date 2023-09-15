@@ -1,4 +1,4 @@
-import { DATABASE_NAME, INDEX, OBJECT_STORE } from "../constants";
+import { DATABASE_NAME, INDEX, OBJECT_STORE } from '../constants';
 
 class Signletion {
   private static instance: Signletion;
@@ -59,12 +59,12 @@ class Signletion {
           // create the Operation object store
           // with auto-increment id
           const store = db.createObjectStore(OBJECT_STORE, {
-            autoIncrement: true,
+            autoIncrement: true
           });
 
           // create an index on the INDEX property
           store.createIndex(INDEX, INDEX, {
-            unique: true,
+            unique: true
           });
 
           this._database = db;
