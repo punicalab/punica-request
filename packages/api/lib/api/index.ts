@@ -1,7 +1,4 @@
-import { Middleware } from '../decorator';
-import { IRequest, IRequestParams } from '../model/request';
-import { IConfig } from '../model/config';
-import { ContentType } from '../model';
+import { Middleware, IRequest, RequestParams, IConfig, ContentType } from '..';
 
 /**
  *
@@ -35,7 +32,7 @@ export class RequestAPI implements IRequest {
    * @returns
    */
   @Middleware
-  public get<T = any, R = any>(params: IRequestParams<T>): Promise<R> {
+  public get<T = any, R = any>(params: RequestParams<T>): Promise<R> {
     return this._request.get(params);
   }
 
@@ -45,7 +42,7 @@ export class RequestAPI implements IRequest {
    * @returns
    */
   @Middleware
-  public delete<T = any, R = any>(params: IRequestParams<T>): Promise<R> {
+  public delete<T = any, R = any>(params: RequestParams<T>): Promise<R> {
     return this._request.delete(params);
   }
 
@@ -55,7 +52,7 @@ export class RequestAPI implements IRequest {
    * @returns
    */
   @Middleware
-  public post<T = any, R = any>(params: IRequestParams<T>): Promise<R> {
+  public post<T = any, R = any>(params: RequestParams<T>): Promise<R> {
     return this._request.post(params);
   }
 
@@ -65,7 +62,7 @@ export class RequestAPI implements IRequest {
    * @returns
    */
   @Middleware
-  public put<T = any, R = any>(params: IRequestParams<T>): Promise<R> {
+  public put<T = any, R = any>(params: RequestParams<T>): Promise<R> {
     return this._request.put(params);
   }
 

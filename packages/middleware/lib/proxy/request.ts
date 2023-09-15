@@ -1,39 +1,52 @@
-import { BaseMiddleware, HTTP_METHOD_TYPE, ProcessData } from '@punica/request';
-import { OperationDatabase } from './database';
-import { getOperation } from './util/getOperation';
+import { BaseMiddleware, RequestMethods, ProcessData } from '@punica/request';
+import { IStorage } from './model';
 
-export default class ProxyRequestMiddleware extends BaseMiddleware {
+export class ProxyRequestMiddleware extends BaseMiddleware {
+  private _config: ProxyRequestMiddlewareConfig;
+
   /**
    *
+   * @param config
    */
-  constructor() {
+  constructor(config: ProxyRequestMiddlewareConfig) {
     super();
+
+    this._config = config;
   }
 
   /**
    *
    * @returns
    */
-  public availableMethods(): Array<string> {
-    return [HTTP_METHOD_TYPE.GET];
+  public availableMethods(): Array<keyof RequestMethods> {
+    return ['GET'];
   }
 
   /**
    *
    * @param data
    */
-  public process = (data: ProcessData) => {
-    OperationDatabase.getDatabase().then((db) => {
-      const { resolve, params } = data;
-      const { url } = params;
+  public process = async (processData: ProcessData) => {
+    const { storage } = this._config;
+    const { params, resolve } = processData;
+    const { requestURL, cache } = params;
 
-      getOperation(db, url)
-        .then((d) => {
-          resolve(d.result);
-        })
-        .catch(() => {
-          this.next(data);
-        });
-    });
+    if (!cache) {
+      this.next(processData);
+
+      return;
+    }
+
+    const storedData = await storage.read(requestURL);
+
+    if (storedData) {
+      resolve(storedData);
+    } else {
+      this.next(processData);
+    }
   };
 }
+
+type ProxyRequestMiddlewareConfig = {
+  storage: IStorage;
+};

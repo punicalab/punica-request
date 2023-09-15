@@ -2,7 +2,7 @@ import { IConfig, RequestAPI } from '../..';
 import { RequestSample } from './api';
 
 describe('create control', () => {
-  const config: IConfig = { request: { baseURL: '' } };
+  const config: IConfig = { request: { hostname: '' } };
 
   test('create request', () => {
     const api = new RequestSample();

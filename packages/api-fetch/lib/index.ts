@@ -1,10 +1,9 @@
 import {
-  IRequestParams,
+  RequestParams,
   IRequest,
   IConfig,
   mergeConfig,
-  ContentType,
-  HTTP_METHOD_TYPE
+  ContentType
 } from '@punica/request';
 
 export class APIFetch implements IRequest {
@@ -22,16 +21,16 @@ export class APIFetch implements IRequest {
    * @param params
    * @returns
    */
-  public async get<T = any, R = any>(params: IRequestParams<T>): Promise<R> {
-    const { init, url, data } = params;
+  public async get<T = any, R = any>(params: RequestParams<T>): Promise<R> {
+    const { init, requestURL, data } = params;
     const { request } = this._config;
     const { requestInit } = request;
     const config = mergeConfig(requestInit, init);
 
-    const response: any = await fetch(url, {
+    const response: any = await fetch(requestURL, {
       ...config,
       body: data,
-      method: HTTP_METHOD_TYPE.GET
+      method: 'GET'
     });
 
     return response;
@@ -42,16 +41,16 @@ export class APIFetch implements IRequest {
    * @param params
    * @returns
    */
-  public async delete<T = any, R = any>(params: IRequestParams<T>): Promise<R> {
-    const { init, url, data } = params;
+  public async delete<T = any, R = any>(params: RequestParams<T>): Promise<R> {
+    const { init, requestURL, data } = params;
     const { request } = this._config;
     const { requestInit } = request;
     const config = mergeConfig(requestInit, init);
 
-    const response: any = await fetch(url, {
+    const response: any = await fetch(requestURL, {
       ...config,
       body: data,
-      method: HTTP_METHOD_TYPE.DELETE
+      method: 'DELETE'
     });
 
     return response;
@@ -62,15 +61,15 @@ export class APIFetch implements IRequest {
    * @param params
    * @returns
    */
-  public async post<T = any, R = any>(params: IRequestParams<T>): Promise<R> {
-    const { init, url, data } = params;
+  public async post<T = any, R = any>(params: RequestParams<T>): Promise<R> {
+    const { init, requestURL, data } = params;
     const { request } = this._config;
     const { requestInit } = request;
     const config = mergeConfig(requestInit, init);
-    const response: any = await fetch(url, {
+    const response: any = await fetch(requestURL, {
       ...config,
       body: data,
-      method: HTTP_METHOD_TYPE.POST
+      method: 'POST'
     });
 
     return response;
@@ -81,16 +80,16 @@ export class APIFetch implements IRequest {
    * @param params
    * @returns
    */
-  public async put<T = any, R = any>(params: IRequestParams<T>): Promise<R> {
-    const { init, url, data } = params;
+  public async put<T = any, R = any>(params: RequestParams<T>): Promise<R> {
+    const { init, requestURL, data } = params;
     const { request } = this._config;
     const { requestInit } = request;
     const config = mergeConfig(requestInit, init);
 
-    const response: any = await fetch(url, {
+    const response: any = await fetch(requestURL, {
       ...config,
       body: data,
-      method: HTTP_METHOD_TYPE.PUT
+      method: 'PUT'
     });
 
     return response;
@@ -107,16 +106,17 @@ export class APIFetch implements IRequest {
     contentType: ContentType
   ): Promise<unknown> {
     return new Promise((resolve) => {
-      if(contentType){
-        response[contentType]().then((d:any)=>{
-          resolve(d);
-        }).catch((e)=>{
+      if (contentType) {
+        response[contentType]()
+          .then((d: any) => {
+            resolve(d);
+          })
+          .catch((e) => {
             resolve(null);
-        })
-      }else{
-        resolve(null)
+          });
+      } else {
+        resolve(null);
       }
-      
     });
   }
 }

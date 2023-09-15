@@ -1,8 +1,3 @@
-const HTTP_METHOD_TYPE = {
-  GET: 'GET',
-  POST: 'POST',
-  PUT: 'PUT',
-  DELETE: 'DELETE'
-};
-
-export { HTTP_METHOD_TYPE };
+export { default as ContentType } from './contentType';
+export { default as RequestMethods } from './requestMethods';
+export { default as StatusCodes } from './statusCodes';

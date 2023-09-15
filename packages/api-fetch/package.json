@@ -1,11 +1,11 @@
 {
   "name": "@punica/request-fetch",
-  "version": "1.0.19",
+  "version": "2.0.0",
   "description": "Request Fetch",
   "author": {
     "name": "Uryan Sezgin TEKE",
     "email": "uryan.sezgin.teke@gmail.com",
-    "url": "https://github.com/uryansezginteke"
+    "url": "https://github.com/punicalab"
   },
   "keywords": [
     "http",
@@ -22,13 +22,13 @@
     "access": "public"
   },
   "repository": {
-    "url": "git@github.com:uryansezginteke/punica-request.git"
+    "url": "git@github.com:punicalab/punica-request.git"
   },
   "files": [
     "dist"
   ],
   "dependencies": {
-    "@punica/request": "^1.0.10"
+    "@punica/request": "^2.0.0"
   },
   "scripts": {
     "build": "scripty",

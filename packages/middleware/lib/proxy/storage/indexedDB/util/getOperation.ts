@@ -1,5 +1,5 @@
-import { INDEX, OBJECT_STORE } from "../constants";
-import { Record } from "../model";
+import { INDEX, OBJECT_STORE } from '../constants';
+import { Record } from '../model';
 
 /**
  *
@@ -9,7 +9,7 @@ import { Record } from "../model";
  */
 export const getOperation = (db: IDBDatabase, url: string): Promise<Record> => {
   return new Promise((resolve, reject) => {
-    const txn = db.transaction(OBJECT_STORE, "readonly");
+    const txn = db.transaction(OBJECT_STORE, 'readonly');
     const store = txn.objectStore(OBJECT_STORE);
     const index = store.index(INDEX);
     const query = index.get(url);

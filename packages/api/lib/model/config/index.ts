@@ -1,3 +1,12 @@
-export { default as IRequestConfig } from './IRequestConfig';
-export { default as IMiddlewareConfig } from './IMiddlewareConfig';
-export { default as IConfig } from './IConfig';
+import { IMiddleware } from '..';
+
+export interface IConfig {
+  request: {
+    hostname: string;
+    requestInit?: RequestInit;
+  };
+  middleware?: {
+    request?: Array<IMiddleware>;
+    response?: Array<IMiddleware>;
+  };
+}

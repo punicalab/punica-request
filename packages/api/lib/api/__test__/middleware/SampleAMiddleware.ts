@@ -1,4 +1,4 @@
-import { BaseMiddleware, HTTP_METHOD_TYPE, ProcessData } from '../../..';
+import { BaseMiddleware, RequestMethods, ProcessData } from '../../..';
 
 class SampleAMiddleware extends BaseMiddleware {
   /**
@@ -12,8 +12,8 @@ class SampleAMiddleware extends BaseMiddleware {
    *
    * @returns
    */
-  public availableMethods(): Array<string> {
-    return [HTTP_METHOD_TYPE.GET];
+  public availableMethods(): Array<keyof RequestMethods> {
+    return ['GET'];
   }
 
   /**
