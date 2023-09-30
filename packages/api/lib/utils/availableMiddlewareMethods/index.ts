@@ -1,10 +1,11 @@
 import { BaseMiddleware } from '../..';
 
 /**
+ * Filters and returns an array of middlewares that support a specific HTTP method.
  *
- * @param methodName
- * @param middlewares
- * @returns
+ * @param methodName - The HTTP method (e.g., GET, POST, PUT, DELETE).
+ * @param middlewares - An array of middlewares to filter.
+ * @returns An array of middlewares that support the specified HTTP method.
  */
 const availableMiddlewareMethods = (
   methodName: string,

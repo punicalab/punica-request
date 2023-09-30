@@ -2,33 +2,33 @@ import { ProcessData } from '..';
 import { BaseMiddleware } from '.';
 
 class MainMiddleware extends BaseMiddleware {
-  private _apiMethod: any;
-  private _target: any;
+  #apiMethod: any;
+  #target: any;
 
   /**
-   *
-   * @param apiMethod
-   * @param target
+   * Constructor for MainMiddleware.
+   * @param apiMethod - The API method to be executed.
+   * @param target - The target object on which the API method will be executed.
    */
   constructor(apiMethod: any, target: any) {
     super();
 
-    this._apiMethod = apiMethod;
-    this._target = target;
+    this.#apiMethod = apiMethod;
+    this.#target = target;
   }
 
   /**
-   *
-   * @param processData
+   * Process method for MainMiddleware. It executes the API method and handles the response.
+   * @param processData - Processed data.
    */
   public process(processData: ProcessData): void {
-    this._apiMethod
-      .apply(this._target, [processData.params])
+    this.#apiMethod
+      .apply(this.#target, [processData.params])
       .then(async (response: Response) => {
         processData.response = response;
 
         if (response.ok) {
-          processData.body = await this._target.readResponse(
+          processData.body = await this.#target.readResponse(
             processData.response,
             processData.params.contentType
           );

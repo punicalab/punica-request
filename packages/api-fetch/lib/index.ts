@@ -6,27 +6,33 @@ import {
   ContentType
 } from '@punica/request';
 
+/**
+ * APIFetch class implements the IRequest interface and provides methods for making HTTP requests.
+ */
 export class APIFetch implements IRequest {
-  private _config: IConfig;
+  #config: IConfig;
 
   /**
-   *
+   * Sets the configuration for the APIFetch instance.
+   * @param value - The configuration to set.
    */
   public set config(value: IConfig) {
-    this._config = value;
+    this.#config = value;
   }
 
   /**
-   *
-   * @param params
-   * @returns
+   * Sends a GET request.
+   * @param params - The request parameters.
+   * @returns A Promise that resolves with the response.
    */
   public async get<T = any, R = any>(params: RequestParams<T>): Promise<R> {
+    // Merged request configuration
     const { init, requestURL, data } = params;
-    const { request } = this._config;
+    const { request } = this.#config;
     const { requestInit } = request;
     const config = mergeConfig(requestInit, init);
 
+    // Making the GET request using Fetch API
     const response: any = await fetch(requestURL, {
       ...config,
       body: data,
@@ -37,16 +43,18 @@ export class APIFetch implements IRequest {
   }
 
   /**
-   *
-   * @param params
-   * @returns
+   * Sends a DELETE request.
+   * @param params - The request parameters.
+   * @returns A Promise that resolves with the response.
    */
   public async delete<T = any, R = any>(params: RequestParams<T>): Promise<R> {
+    // Merged request configuration
     const { init, requestURL, data } = params;
-    const { request } = this._config;
+    const { request } = this.#config;
     const { requestInit } = request;
     const config = mergeConfig(requestInit, init);
 
+    // Making the DELETE request using Fetch API
     const response: any = await fetch(requestURL, {
       ...config,
       body: data,
@@ -57,15 +65,18 @@ export class APIFetch implements IRequest {
   }
 
   /**
-   *
-   * @param params
-   * @returns
+   * Sends a POST request.
+   * @param params - The request parameters.
+   * @returns A Promise that resolves with the response.
    */
   public async post<T = any, R = any>(params: RequestParams<T>): Promise<R> {
+    // Merged request configuration
     const { init, requestURL, data } = params;
-    const { request } = this._config;
+    const { request } = this.#config;
     const { requestInit } = request;
     const config = mergeConfig(requestInit, init);
+
+    // Making the POST request using Fetch API
     const response: any = await fetch(requestURL, {
       ...config,
       body: data,
@@ -76,16 +87,18 @@ export class APIFetch implements IRequest {
   }
 
   /**
-   *
-   * @param params
-   * @returns
+   * Sends a PUT request.
+   * @param params - The request parameters.
+   * @returns A Promise that resolves with the response.
    */
   public async put<T = any, R = any>(params: RequestParams<T>): Promise<R> {
+    // Merged request configuration
     const { init, requestURL, data } = params;
-    const { request } = this._config;
+    const { request } = this.#config;
     const { requestInit } = request;
     const config = mergeConfig(requestInit, init);
 
+    // Making the POST request using Fetch API
     const response: any = await fetch(requestURL, {
       ...config,
       body: data,
@@ -96,10 +109,10 @@ export class APIFetch implements IRequest {
   }
 
   /**
-   *
-   * @param response
-   * @param contentType
-   * @returns
+   * Reads the response based on the provided content type.
+   * @param response - The response object.
+   * @param contentType - The content type of the response.
+   * @returns A Promise that resolves with the response data.
    */
   public readResponse(
     response: Response,
@@ -107,6 +120,7 @@ export class APIFetch implements IRequest {
   ): Promise<unknown> {
     return new Promise((resolve) => {
       if (contentType) {
+        // Handling response based on content type
         response[contentType]()
           .then((d: any) => {
             resolve(d);

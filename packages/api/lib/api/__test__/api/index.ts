@@ -1,7 +1,7 @@
 import { RequestParams, IConfig, IRequest } from '../../..';
 
 export class RequestSample implements IRequest {
-  private _config: IConfig;
+  #config: IConfig;
 
   /**
    *
@@ -12,7 +12,7 @@ export class RequestSample implements IRequest {
    *
    */
   public set config(value: IConfig) {
-    this._config = value;
+    this.#config = value;
   }
 
   /**

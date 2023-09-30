@@ -2,10 +2,10 @@ import { OBJECT_STORE } from '../constants';
 import { Record } from '../model';
 
 /**
- *
- * @param db
- * @param record
- * @returns
+ * Inserts a record into the IndexedDB database.
+ * @param db - The IndexedDB database instance.
+ * @param record - The record to be inserted.
+ * @returns A Promise that resolves to true if the record is successfully inserted, or rejects if there's an error.
  */
 export const insertOperation = (
   db: IDBDatabase,
