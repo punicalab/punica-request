@@ -1,81 +1,89 @@
 import { Middleware, IRequest, RequestParams, IConfig, ContentType } from '..';
 
 /**
+ * The RequestAPI class acts as an adapter, enhancing
+ * the behavior of the underlying IRequest interface
+ * by allowing additional configurations.
+ * It provides methods for sending various types of
+ * HTTP requests and handles the response data.
+ * The class utilizes decorators for middleware functionality.
  *
  */
 export class RequestAPI implements IRequest {
-  private _request: IRequest;
-  private _config: IConfig;
+  #request: IRequest;
+  #config: IConfig;
 
   /**
-   *
-   * @param request
-   * @param config
+   * Creates an instance of RequestAPI.
+   * @param request - The underlying IRequest implementation.
+   * @param config - The configuration for the request.
    */
   constructor(request: IRequest, config: IConfig) {
-    this._request = request;
-    this._config = config;
+    this.#request = request;
+    this.#config = config;
 
-    request.config = this._config;
+    // Assign the configuration to the underlying request object.
+    request.config = this.#config;
   }
 
   /**
-   *
+   * Gets the current configuration.
+   * @returns The current configuration.
    */
   public get config(): IConfig {
-    return this._config;
+    return this.#config;
   }
 
   /**
-   *
-   * @param params
-   * @returns
+   * Sends a GET request.
+   * @param params - The request parameters.
+   * @returns A promise that resolves with the response data.
    */
   @Middleware
   public get<T = any, R = any>(params: RequestParams<T>): Promise<R> {
-    return this._request.get(params);
+    return this.#request.get(params);
   }
 
   /**
-   *
-   * @param params
-   * @returns
+   * Sends a DELETE request.
+   * @param params - The request parameters.
+   * @returns A promise that resolves with the response data.
    */
   @Middleware
   public delete<T = any, R = any>(params: RequestParams<T>): Promise<R> {
-    return this._request.delete(params);
+    return this.#request.delete(params);
   }
 
   /**
-   *
-   * @param params
-   * @returns
+   * Sends a POST request.
+   * @param params - The request parameters.
+   * @returns A promise that resolves with the response data.
    */
   @Middleware
   public post<T = any, R = any>(params: RequestParams<T>): Promise<R> {
-    return this._request.post(params);
+    return this.#request.post(params);
   }
 
   /**
-   *
-   * @param params
-   * @returns
+   * Sends a PUT request.
+   * @param params - The request parameters.
+   * @returns A promise that resolves with the response data.
    */
   @Middleware
   public put<T = any, R = any>(params: RequestParams<T>): Promise<R> {
-    return this._request.put(params);
+    return this.#request.put(params);
   }
 
   /**
-   *
-   * @param response
-   * @param contentType
-   * @returns
+   * Reads the response and handles the content type.
+   * @param response - The response object.
+   * @param contentType - The content type of the response.
+   * @returns A promise that resolves with the parsed response data.
    */
   public readResponse(
     response: Response,
     contentType: ContentType
   ): Promise<unknown> {
-    return this._request.readResponse(response, contentType);
+    return this.#request.readResponse(response, contentType);
   }
 }

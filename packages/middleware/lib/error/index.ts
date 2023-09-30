@@ -1,23 +1,26 @@
 import { BaseMiddleware, ContentType, ProcessData } from '@punica/request';
 
+/**
+ * ErrorMiddleware is a middleware class that handles errors in the HTTP response.
+ */
 export default class ErrorMiddleware extends BaseMiddleware {
-  private config: ErrorMiddlewareConfig;
+  #config: ErrorMiddlewareConfig;
 
   /**
-   *
-   * @param errors
+   * Constructs an instance of ErrorMiddleware with the provided configuration.
+   * @param config - The configuration for the ErrorMiddleware.
    */
-  constructor(config: ErrorMiddlewareConfig) {
+  public constructor(config: ErrorMiddlewareConfig) {
     super();
 
-    this.config = config;
+    this.#config = config;
   }
 
   /**
-   *
-   * @param message
+   * Logs an error message to the console.
+   * @param message - The error message to be logged.
    */
-  private LOGGER = (message: string) => {
+  #LOGGER = (message: string) => {
     console.error(
       `%cPUNICA_ERROR_MIDDLEWARE ${message}`,
       'background-color: red; color: white; padding: 12px'
@@ -25,8 +28,8 @@ export default class ErrorMiddleware extends BaseMiddleware {
   };
 
   /**
-   *
-   * @param processData
+   * Processes the incoming response data.
+   * @param processData - The data to be processed.
    */
   public process = (processData: ProcessData) => {
     const { response, reject } = processData;
@@ -34,31 +37,30 @@ export default class ErrorMiddleware extends BaseMiddleware {
 
     if (ok) {
       this.next(processData);
-
       return;
     }
 
-    const { error, contentType } = this.config;
+    const { error, contentType } = this.#config;
     const errorHandler = error[status];
 
     if (errorHandler == null) {
-      this.LOGGER('You should add the error message handler!');
-
+      this.#LOGGER('You should add the error message handler!');
       reject(processData);
-
       return;
     }
 
+    // Attempt to read the response content based on the provided content type.
     processData.response[contentType]()
       .then((content) => {
         processData.body = content;
       })
       .catch(() => {
-        this.LOGGER(
+        this.#LOGGER(
           'Received read error for requested content type from operation response'
         );
       })
       .finally(() => {
+        // Call the error handler and ensure rejection.
         errorHandler(processData).finally(() => {
           reject(processData);
         });
@@ -66,6 +68,9 @@ export default class ErrorMiddleware extends BaseMiddleware {
   };
 }
 
+/**
+ * Configuration object for ErrorMiddleware.
+ */
 export type ErrorMiddlewareConfig = {
   contentType: ContentType;
   error: Record<number, (data: ProcessData) => Promise<void>>;

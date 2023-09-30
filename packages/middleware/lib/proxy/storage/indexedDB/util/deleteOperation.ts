@@ -1,10 +1,10 @@
 import { OBJECT_STORE } from '../constants';
 
 /**
- *
- * @param db
- * @param id
- * @returns
+ * Deletes a contact from the IndexedDB database.
+ * @param db - The IndexedDB database instance.
+ * @param id - The ID of the contact to be deleted.
+ * @returns A Promise that resolves to true if the deletion is successful, or rejects if there's an error.
  */
 export const deleteContact = (
   db: IDBDatabase,
