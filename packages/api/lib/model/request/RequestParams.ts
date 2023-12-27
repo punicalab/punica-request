@@ -6,7 +6,7 @@ type RequestParams<T> = {
   path: string;
 
   // Optional query parameters for the request.
-  query?: Query;
+  query?: URLSearchParams | Query;
 
   // Data to be sent with the request (for methods like POST and PUT).
   data?: T;
