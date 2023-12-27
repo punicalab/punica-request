@@ -43,7 +43,7 @@ export const Middleware: MethodDecorator = (
       const queryParams = new URLSearchParams(params.query);
       const requestURL = `${request.hostname}${
         params.path || ''
-      }?${queryParams.toString()}`;
+      }?${queryParams}`;
 
       //initialize headers
       const init = params.init
