@@ -47,7 +47,7 @@ export const Middleware: MethodDecorator = (
         queryParams = new URLSearchParams(params.query);
       }
 
-      if (queryParams) {
+      if (queryParams && queryParams.size > 0) {
         requestURL += `?${queryParams}`;
       }
 
