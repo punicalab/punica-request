@@ -1,4 +1,4 @@
-import { RequestParams, IConfig, IRequest } from '../../..';
+import { RequestParams, IConfig, IRequest, IPatch } from '../../..';
 
 export class RequestSample implements IRequest {
   #config: IConfig;
@@ -108,6 +108,38 @@ export class RequestSample implements IRequest {
    * @returns
    */
   public async put<T = any, R = any>(params: RequestParams<T>): Promise<R> {
+    return new Promise<R>((resolve, reject) => {
+      if (params.init) {
+        const res: any = params.data;
+
+        resolve({
+          status: 200,
+          headers: {
+            get() {
+              return 'application/json; charset=utf-8';
+            }
+          },
+          ok: true,
+          json: () => {
+            return new Promise((resolve) => {
+              resolve(res);
+            });
+          }
+        } as any);
+      }
+
+      reject(new Error('error'));
+    });
+  }
+
+  /**
+   *
+   * @param params
+   * @returns
+   */
+  public async patch<T = Array<IPatch>, R = any>(
+    params: RequestParams<T>
+  ): Promise<R> {
     return new Promise<R>((resolve, reject) => {
       if (params.init) {
         const res: any = params.data;

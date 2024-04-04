@@ -58,5 +58,17 @@ describe('api sample', () => {
       });
   });
 
+  test('patch', async () => {
+    return request
+      .patch({
+        path: 'url',
+        data: [{ op: 'add', path: '' }],
+        contentType: 'json'
+      })
+      .then((d) => {
+        expect(d).toEqual([{ op: 'add', path: '' }]);
+      });
+  });
+
   test.todo('send operation');
 });

@@ -1,4 +1,11 @@
-import { Middleware, IRequest, RequestParams, IConfig, ContentType } from '..';
+import {
+  Middleware,
+  IRequest,
+  RequestParams,
+  IConfig,
+  ContentType,
+  IPatch
+} from '..';
 
 /**
  * The RequestAPI class acts as an adapter, enhancing
@@ -72,6 +79,18 @@ export class RequestAPI implements IRequest {
   @Middleware
   public put<T = any, R = any>(params: RequestParams<T>): Promise<R> {
     return this.#request.put(params);
+  }
+
+  /**
+   * Sends a PATCH request.
+   * @param params - The request parameters.
+   * @returns A promise that resolves with the response data.
+   */
+  @Middleware
+  public patch<T = Array<IPatch>, R = any>(
+    params: RequestParams<T>
+  ): Promise<R> {
+    return this.#request.patch(params);
   }
 
   /**
