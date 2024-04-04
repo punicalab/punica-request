@@ -3,7 +3,8 @@ import {
   IRequest,
   IConfig,
   mergeConfig,
-  ContentType
+  ContentType,
+  IPatch
 } from '@punica/request';
 
 /**
@@ -98,11 +99,35 @@ export class APIFetch implements IRequest {
     const { requestInit } = request;
     const config = mergeConfig(requestInit, init);
 
-    // Making the POST request using Fetch API
+    // Making the PUT request using Fetch API
     const response: any = await fetch(requestURL, {
       ...config,
       body: data,
       method: 'PUT'
+    });
+
+    return response;
+  }
+
+  /**
+   * Sends a PATCH request.
+   * @param params - The request parameters.
+   * @returns A Promise that resolves with the response.
+   */
+  public async patch<T = Array<IPatch>, R = any>(
+    params: RequestParams<T>
+  ): Promise<R> {
+    // Merged request configuration
+    const { init, requestURL, data } = params;
+    const { request } = this.#config;
+    const { requestInit } = request;
+    const config = mergeConfig(requestInit, init);
+
+    // Making the PATCH request using Fetch API
+    const response: any = await fetch(requestURL, {
+      ...config,
+      body: data,
+      method: 'PATCH'
     });
 
     return response;
