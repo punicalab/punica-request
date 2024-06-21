@@ -1,4 +1,4 @@
-type ContentType =
+export type ContentType =
   /**
    * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/Response/arrayBuffer}
    *
@@ -35,5 +35,3 @@ type ContentType =
    * The response is always decoded using UTF-8.
    */
   | 'text';
-
-export default ContentType;

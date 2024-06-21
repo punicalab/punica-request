@@ -6,7 +6,7 @@ import { OBJECT_STORE } from '../constants';
  * @param id - The ID of the contact to be deleted.
  * @returns A Promise that resolves to true if the deletion is successful, or rejects if there's an error.
  */
-export const deleteContact = (
+export const deleteOperation = (
   db: IDBDatabase,
   id: string
 ): Promise<boolean> => {

@@ -8,6 +8,4 @@
  *   search: 'keyword'
  * }
  */
-type Query = { [key: string]: any };
-
-export default Query;
+export type Query = { [key: string]: any };

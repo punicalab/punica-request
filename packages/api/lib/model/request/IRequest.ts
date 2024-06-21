@@ -1,7 +1,7 @@
 import { IConfig, ContentType, RequestParams, IPatch } from '..';
 
 // Interface representing a request object.
-interface IRequest {
+export interface IRequest {
   // Configuration information for the request.
   config: IConfig;
 
@@ -23,5 +23,3 @@ interface IRequest {
   // Function for reading the response data.
   readResponse(response: Response, contentType: ContentType): Promise<unknown>;
 }
-
-export default IRequest;

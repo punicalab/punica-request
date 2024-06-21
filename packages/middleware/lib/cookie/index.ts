@@ -3,7 +3,7 @@ import { BaseMiddleware, getCookie, ProcessData } from '@punica/request';
 /**
  * CookieMiddleware is a middleware class that handles cookies in the HTTP request.
  */
-export default class CookieMiddleware extends BaseMiddleware {
+export class CookieMiddleware extends BaseMiddleware {
   #config: CookieMiddlewareConfig;
 
   /**

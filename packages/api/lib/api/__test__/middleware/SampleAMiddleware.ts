@@ -1,6 +1,6 @@
-import { BaseMiddleware, RequestMethods, ProcessData } from '../../..';
+import { BaseMiddleware, ProcessData, RequestMethods } from '../../..';
 
-class SampleAMiddleware extends BaseMiddleware {
+export class SampleAMiddleware extends BaseMiddleware {
   /**
    *
    */
@@ -23,5 +23,3 @@ class SampleAMiddleware extends BaseMiddleware {
     this.next(data);
   };
 }
-
-export default SampleAMiddleware;

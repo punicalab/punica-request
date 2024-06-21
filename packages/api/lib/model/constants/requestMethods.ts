@@ -1,4 +1,4 @@
-type RequestMethods = {
+export type RequestMethods = {
   /**
    * @see {@link https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.1}
    *
@@ -64,5 +64,3 @@ type RequestMethods = {
    */
   PATCH: 'PATCH';
 };
-
-export default RequestMethods;

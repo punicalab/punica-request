@@ -1,9 +1,14 @@
-import { BaseMiddleware, ContentType, ProcessData } from '@punica/request';
+import {
+  BaseMiddleware,
+  ContentType,
+  ProcessData,
+  isHttpStatusOk
+} from '@punica/request';
 
 /**
  * ErrorMiddleware is a middleware class that handles errors in the HTTP response.
  */
-export default class ErrorMiddleware extends BaseMiddleware {
+export class ErrorMiddleware extends BaseMiddleware {
   #config: ErrorMiddlewareConfig;
 
   /**
@@ -33,9 +38,9 @@ export default class ErrorMiddleware extends BaseMiddleware {
    */
   public process = (processData: ProcessData) => {
     const { response, reject } = processData;
-    const { status, ok } = response;
+    const { status } = response;
 
-    if (ok) {
+    if (isHttpStatusOk(status)) {
       this.next(processData);
       return;
     }
