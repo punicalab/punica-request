@@ -4,7 +4,7 @@
  * @param conf2 - The second configuration object.
  * @returns The merged configuration object.
  */
-const mergeConfig = (conf1: any, conf2: any) => {
+export const mergeConfig = (conf1: any, conf2: any) => {
   // Create copies of the configuration objects to avoid modifying the originals
   conf1 = { ...(conf1 || {}) };
   conf2 = { ...(conf2 || {}) };
@@ -27,5 +27,3 @@ const mergeConfig = (conf1: any, conf2: any) => {
   // Return the merged configuration object
   return conf1;
 };
-
-export default mergeConfig;

@@ -3,12 +3,9 @@ import { IMiddleware, ProcessData, RequestMethods } from '..';
 /**
  * Base class for middleware implementations. Implements common functionality and defines abstract method for processing.
  */
-abstract class BaseMiddleware implements IMiddleware {
-  // Reference to the next middleware in the chain
+export abstract class BaseMiddleware implements IMiddleware {
   #nextMiddleware: IMiddleware;
-
-  // Reference to the first middleware in the chain
-  protected _firstMiddleware: IMiddleware;
+  #headMiddleware: IMiddleware;
 
   /**
    * Constructs a new BaseMiddleware instance.
@@ -24,11 +21,27 @@ abstract class BaseMiddleware implements IMiddleware {
   }
 
   /**
-   * Sets the first middleware in the chain.
-   * @param m - The first middleware
+   * Gets the next middleware in the chain.
+   * @param m - The next middleware
    */
-  set firstMiddleware(m: IMiddleware) {
-    this._firstMiddleware = m;
+  get nextMiddleware() {
+    return this.#nextMiddleware;
+  }
+
+  /**
+   * Sets the head middleware in the chain.
+   * @param m - The head middleware
+   */
+  set headMiddleware(m: IMiddleware) {
+    this.#headMiddleware = m;
+  }
+
+  /**
+   * Gets the head middleware in the chain.
+   * @param m - The head middleware
+   */
+  get headMiddleware() {
+    return this.#headMiddleware;
   }
 
   /**
@@ -38,6 +51,7 @@ abstract class BaseMiddleware implements IMiddleware {
   public next(data: ProcessData) {
     if (this.#nextMiddleware) {
       this.#nextMiddleware.process(data);
+
       return;
     }
 
@@ -58,5 +72,3 @@ abstract class BaseMiddleware implements IMiddleware {
    */
   abstract process(processData: ProcessData): void;
 }
-
-export default BaseMiddleware;

@@ -1,7 +1,10 @@
 import { ContentType, Query } from '..';
 
-// Represents the parameters for an HTTP request.
-type RequestParams<T> = {
+/**
+ * Represents the parameters for an HTTP request.
+ * This type is generic over `T`, where `T` represents the type of data to be sent with the request.
+ */
+export type RequestParams<T> = {
   // The path for the request.
   path: string;
 
@@ -21,10 +24,8 @@ type RequestParams<T> = {
   requestURL?: string;
 
   // Indicates whether caching should be enabled for the request.
-  cache?: boolean;
+  cache?: { expireTime: number };
 
   // Additional properties that can be used as needed.
   [key: string]: any;
 };
-
-export default RequestParams;

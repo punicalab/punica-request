@@ -21,7 +21,8 @@ interface IStorage {
   write: (
     requestURL: string,
     contentType: ContentType,
-    body: unknown
+    body: unknown,
+    expireTime?: number
   ) => Promise<any>;
 }
 

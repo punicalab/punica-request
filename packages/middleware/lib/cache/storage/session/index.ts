@@ -21,12 +21,18 @@ export class StorageSession implements IStorage {
       }
 
       const storedData = JSON.parse(readedData);
-      const { contentType, body } = storedData;
+      const { contentType, body, expireAt } = storedData;
 
-      switch (contentType as ContentType) {
-        case 'json':
-          resolve(body);
-          break;
+      // Check if data has expired
+      if (expireAt && Date.now() > expireAt) {
+        sessionStorage.removeItem(requestURL); // Remove expired data from storage
+        resolve(null);
+      } else {
+        switch (contentType as ContentType) {
+          case 'json':
+            resolve(body);
+            break;
+        }
       }
     });
   };
@@ -41,10 +47,16 @@ export class StorageSession implements IStorage {
   public write = (
     requestURL: string,
     contentType: ContentType,
-    body: unknown
+    body: unknown,
+    expireTime: number
   ): Promise<boolean> => {
     return new Promise((resolve) => {
-      sessionStorage.setItem(requestURL, JSON.stringify({ contentType, body }));
+      const expirationTime = Date.now() + expireTime;
+
+      sessionStorage.setItem(
+        requestURL,
+        JSON.stringify({ contentType, body, expireAt: expirationTime })
+      );
       resolve(true);
     });
   };

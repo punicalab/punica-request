@@ -1,4 +1,4 @@
-type StatusCodes = {
+export type StatusCodes = {
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.2.1}
    *
@@ -534,5 +534,3 @@ type StatusCodes = {
    */
   NETWORK_AUTHENTICATION_REQUIRED: 511;
 };
-
-export default StatusCodes;

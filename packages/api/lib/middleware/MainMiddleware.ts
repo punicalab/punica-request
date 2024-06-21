@@ -1,7 +1,7 @@
-import { ProcessData } from '..';
+import { ProcessData, isHttpStatusOk } from '..';
 import { BaseMiddleware } from '.';
 
-class MainMiddleware extends BaseMiddleware {
+export class MainMiddleware extends BaseMiddleware {
   #apiMethod: any;
   #target: any;
 
@@ -25,18 +25,19 @@ class MainMiddleware extends BaseMiddleware {
     this.#apiMethod
       .apply(this.#target, [processData.params])
       .then(async (response: Response) => {
+        const { status } = response;
         processData.response = response;
 
-        if (response.ok) {
+        if (isHttpStatusOk(status)) {
           processData.body = await this.#target.readResponse(
             processData.response,
             processData.params.contentType
           );
         }
 
+        await processData.notifier.notifySubscribers(processData);
+
         this.next(processData);
       });
   }
 }
-
-export default MainMiddleware;

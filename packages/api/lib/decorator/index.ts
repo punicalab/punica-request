@@ -3,7 +3,8 @@ import {
   IMiddleware,
   RequestParams,
   ProcessData,
-  availableMiddlewareMethods
+  availableMiddlewareMethods,
+  Notifier
 } from '..';
 
 /**
@@ -23,71 +24,75 @@ export const Middleware: MethodDecorator = (
   // Override the original method
   descriptor.value = function (...args: any[]) {
     return new Promise((resolve, reject) => {
-      // Extract request parameters
-      const params: RequestParams<any> = args[0];
-      const { config } = this;
-      const { middleware, request } = config;
+      try {
+        // Extract request parameters
+        const params: RequestParams<any> = args[0];
+        const { config } = this;
+        const { middleware, request } = config;
 
-      // Create instances of main middleware, request middleware, and response middleware
-      const mainMiddleware = new MainMiddleware(originalMethod, this);
-      const requestMiddleware = availableMiddlewareMethods(
-        originalMethod.name,
-        middleware?.request
-      );
-      const responseMiddleware = availableMiddlewareMethods(
-        originalMethod.name,
-        middleware?.response
-      );
+        // Create instances of main middleware, request middleware, and response middleware
+        const mainMiddleware = new MainMiddleware(originalMethod, this);
+        const requestMiddleware = availableMiddlewareMethods(
+          originalMethod.name,
+          middleware?.request
+        );
+        const responseMiddleware = availableMiddlewareMethods(
+          originalMethod.name,
+          middleware?.response
+        );
 
-      let requestURL = `${request.hostname}${params.path || ''}`;
-      let queryParams = null;
+        let requestURL = `${request.hostname}${params.path || ''}`;
+        let queryParams = new URLSearchParams(params.query || {});
 
-      // Construct the request URL with query parameters
-      if (params.query) {
-        queryParams = new URLSearchParams(params.query);
-      }
-
-      if (queryParams && queryParams.size > 0) {
-        requestURL += `?${queryParams}`;
-      }
-
-      //initialize headers
-      const init = params.init
-        ? { headers: {}, ...params.init }
-        : { headers: {} };
-
-      // Prepare processed data
-      const processData: ProcessData = {
-        config,
-        resolve,
-        reject,
-        params: {
-          ...params,
-          requestURL,
-          init
+        // Construct the request URL with query parameters
+        if (queryParams.toString()) {
+          requestURL += `?${queryParams}`;
         }
-      };
 
-      // Combine all middleware into a list
-      const middlewareList: Array<IMiddleware> = [
-        ...requestMiddleware,
-        mainMiddleware,
-        ...responseMiddleware
-      ];
+        // Create an instance of Notifier to manage notifications and updates.
+        const notifier = new Notifier();
 
-      // Set up middleware chain
-      const firstMiddleware = middlewareList[0];
-      middlewareList.reduce((previous, current) => {
-        if (previous) {
-          previous.nextMiddleware = current;
-        }
-        current.firstMiddleware = firstMiddleware;
-        current.nextMiddleware = null;
-        return current;
-      }, null);
+        // Initialize headers
+        const init = params.init
+          ? { headers: {}, ...params.init }
+          : { headers: {} };
 
-      // Start processing with the first middleware
-      firstMiddleware.process(processData);
+        // Prepare processed data
+        const processData: ProcessData = {
+          config,
+          resolve,
+          reject,
+          notifier,
+          params: {
+            ...params,
+            requestURL,
+            init
+          }
+        };
+
+        // Combine all middleware into a list
+        const middlewareList: Array<IMiddleware> = [
+          ...requestMiddleware,
+          mainMiddleware,
+          ...responseMiddleware
+        ];
+
+        // Set up middleware chain
+        const headMiddleware = middlewareList[0];
+        middlewareList.reduce((previous, current) => {
+          if (previous) {
+            previous.nextMiddleware = current;
+          }
+          current.headMiddleware = headMiddleware;
+          current.nextMiddleware = null;
+          return current;
+        }, null);
+
+        // Start processing with the head middleware
+        headMiddleware.process(processData);
+      } catch (error) {
+        reject(error);
+      }
     });
   };
 };

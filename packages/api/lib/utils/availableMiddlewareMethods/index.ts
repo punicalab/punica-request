@@ -7,7 +7,7 @@ import { BaseMiddleware } from '../..';
  * @param middlewares - An array of middlewares to filter.
  * @returns An array of middlewares that support the specified HTTP method.
  */
-const availableMiddlewareMethods = (
+export const availableMiddlewareMethods = (
   methodName: string,
   middlewares: Array<BaseMiddleware>
 ): Array<BaseMiddleware> => {
@@ -18,5 +18,3 @@ const availableMiddlewareMethods = (
     return method != null;
   });
 };
-
-export default availableMiddlewareMethods;

@@ -28,17 +28,25 @@ describe('api sample', () => {
 
   test('get', async () => {
     return request
-      .get({ path: 'url', query: { data: 5 }, contentType: 'json' })
+      .get({
+        path: 'url',
+        query: new URLSearchParams({ data: '5' }),
+        contentType: 'json'
+      })
       .then((d) => {
-        expect(d).toEqual({ data: 5 });
+        expect(d.get('data')).toEqual('5');
       });
   });
 
   test('delete', async () => {
     return request
-      .delete({ path: 'url', query: { data: 5 }, contentType: 'json' })
+      .delete({
+        path: 'url',
+        query: new URLSearchParams({ data: '5' }),
+        contentType: 'json'
+      })
       .then((d) => {
-        expect(d).toEqual({ data: 5 });
+        expect(d.get('data')).toEqual('5');
       });
   });
 
