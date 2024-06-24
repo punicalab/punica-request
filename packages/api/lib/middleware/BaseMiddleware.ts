@@ -14,15 +14,15 @@ export abstract class BaseMiddleware implements IMiddleware {
 
   /**
    * Sets the next middleware in the chain.
-   * @param m - The next middleware
+   * @param middleware - The next middleware
    */
-  set nextMiddleware(m: IMiddleware) {
-    this.#nextMiddleware = m;
+  set nextMiddleware(middleware: IMiddleware) {
+    this.#nextMiddleware = middleware;
   }
 
   /**
    * Gets the next middleware in the chain.
-   * @param m - The next middleware
+   * @param middleware - The next middleware
    */
   get nextMiddleware() {
     return this.#nextMiddleware;
@@ -30,15 +30,15 @@ export abstract class BaseMiddleware implements IMiddleware {
 
   /**
    * Sets the head middleware in the chain.
-   * @param m - The head middleware
+   * @param middleware - The head middleware
    */
-  set headMiddleware(m: IMiddleware) {
-    this.#headMiddleware = m;
+  set headMiddleware(middleware: IMiddleware) {
+    this.#headMiddleware = middleware;
   }
 
   /**
    * Gets the head middleware in the chain.
-   * @param m - The head middleware
+   * @param middleware - The head middleware
    */
   get headMiddleware() {
     return this.#headMiddleware;
@@ -55,7 +55,7 @@ export abstract class BaseMiddleware implements IMiddleware {
       return;
     }
 
-    data.resolve(data.body);
+    data.resolve(data.httpResponse);
   }
 
   /**
@@ -63,7 +63,7 @@ export abstract class BaseMiddleware implements IMiddleware {
    * @returns Available HTTP methods
    */
   public availableMethods(): Array<keyof RequestMethods> {
-    return ['GET', 'POST', 'PUT', 'DELETE'];
+    return ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
   }
 
   /**

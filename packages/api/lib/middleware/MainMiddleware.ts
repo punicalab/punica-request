@@ -1,5 +1,6 @@
-import { ProcessData, isHttpStatusOk } from '..';
+import { ProcessData } from '..';
 import { BaseMiddleware } from '.';
+import { HttpResponse } from '../model/middleware/HttpResponse';
 
 export class MainMiddleware extends BaseMiddleware {
   #apiMethod: any;
@@ -24,16 +25,8 @@ export class MainMiddleware extends BaseMiddleware {
   public process(processData: ProcessData): void {
     this.#apiMethod
       .apply(this.#target, [processData.params])
-      .then(async (response: Response) => {
-        const { status } = response;
-        processData.response = response;
-
-        if (isHttpStatusOk(status)) {
-          processData.body = await this.#target.readResponse(
-            processData.response,
-            processData.params.contentType
-          );
-        }
+      .then(async (httpResponse: HttpResponse) => {
+        processData.httpResponse = httpResponse;
 
         await processData.notifier.notifySubscribers(processData);
 

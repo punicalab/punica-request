@@ -1,7 +1,7 @@
 {
-  "name": "@punica/request-fetch",
-  "version": "2.4.0",
-  "description": "Request Fetch",
+  "name": "@punica/request-http",
+  "version": "1.0.0",
+  "description": "Request Node http",
   "author": {
     "name": "Uryan Sezgin TEKE",
     "email": "uryan.sezgin.teke@gmail.com",
@@ -9,10 +9,7 @@
   },
   "keywords": [
     "http",
-    "promise",
-    "reflect",
-    "ajax",
-    "fetch"
+    "promise"
   ],
   "private": false,
   "license": "ISC",

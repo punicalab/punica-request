@@ -3,8 +3,8 @@ import {
   IRequest,
   RequestParams,
   IConfig,
-  ContentType,
-  IPatch
+  IPatch,
+  HttpResponse
 } from '..';
 
 /**
@@ -47,7 +47,9 @@ export class RequestAPI implements IRequest {
    * @returns A promise that resolves with the response data.
    */
   @Middleware
-  public get<T = any, R = any>(params: RequestParams<T>): Promise<R> {
+  public get<T = any, R = any>(
+    params: RequestParams<T>
+  ): Promise<HttpResponse<R>> {
     return this.#request.get(params);
   }
 
@@ -57,7 +59,9 @@ export class RequestAPI implements IRequest {
    * @returns A promise that resolves with the response data.
    */
   @Middleware
-  public delete<T = any, R = any>(params: RequestParams<T>): Promise<R> {
+  public delete<T = any, R = any>(
+    params: RequestParams<T>
+  ): Promise<HttpResponse<R>> {
     return this.#request.delete(params);
   }
 
@@ -67,7 +71,9 @@ export class RequestAPI implements IRequest {
    * @returns A promise that resolves with the response data.
    */
   @Middleware
-  public post<T = any, R = any>(params: RequestParams<T>): Promise<R> {
+  public post<T = any, R = any>(
+    params: RequestParams<T>
+  ): Promise<HttpResponse<R>> {
     return this.#request.post(params);
   }
 
@@ -77,7 +83,9 @@ export class RequestAPI implements IRequest {
    * @returns A promise that resolves with the response data.
    */
   @Middleware
-  public put<T = any, R = any>(params: RequestParams<T>): Promise<R> {
+  public put<T = any, R = any>(
+    params: RequestParams<T>
+  ): Promise<HttpResponse<R>> {
     return this.#request.put(params);
   }
 
@@ -89,20 +97,7 @@ export class RequestAPI implements IRequest {
   @Middleware
   public patch<T = Array<IPatch>, R = any>(
     params: RequestParams<T>
-  ): Promise<R> {
+  ): Promise<HttpResponse<R>> {
     return this.#request.patch(params);
-  }
-
-  /**
-   * Reads the response and handles the content type.
-   * @param response - The response object.
-   * @param contentType - The content type of the response.
-   * @returns A promise that resolves with the parsed response data.
-   */
-  public readResponse(
-    response: Response,
-    contentType: ContentType
-  ): Promise<unknown> {
-    return this.#request.readResponse(response, contentType);
   }
 }

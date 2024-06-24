@@ -1,4 +1,10 @@
-import { RequestParams, IConfig, IRequest, IPatch } from '../../..';
+import {
+  RequestParams,
+  IConfig,
+  IRequest,
+  IPatch,
+  HttpResponse
+} from '../../..';
 
 export class RequestSample implements IRequest {
   #config: IConfig;
@@ -24,23 +30,16 @@ export class RequestSample implements IRequest {
     return new Promise<R>((resolve, reject) => {
       if (params) {
         const res: any = params.query;
-
-        resolve({
+        const httpResponse: R = {
+          response: res,
           status: 200,
-          headers: {
-            get() {
-              return 'application/json; charset=utf-8';
-            }
-          },
-          ok: true,
-          json: () =>
-            new Promise((resolve) => {
-              resolve(res);
-            })
-        } as any);
-      }
+          body: res
+        };
 
-      reject(new Error('error'));
+        resolve(httpResponse);
+      } else {
+        reject(new Error('params object is required'));
+      }
     });
   }
 
@@ -53,23 +52,16 @@ export class RequestSample implements IRequest {
     return new Promise<R>((resolve, reject) => {
       if (params) {
         const res: any = params.query;
-
-        resolve({
+        const httpResponse: R = {
+          response: res,
           status: 200,
-          headers: {
-            get() {
-              return 'application/json; charset=utf-8';
-            }
-          },
-          ok: true,
-          json: () =>
-            new Promise((resolve) => {
-              resolve(res);
-            })
-        } as any);
-      }
+          body: res
+        };
 
-      reject(new Error('error'));
+        resolve(httpResponse);
+      } else {
+        reject(new Error('params object is required'));
+      }
     });
   }
 
@@ -80,25 +72,18 @@ export class RequestSample implements IRequest {
    */
   public async post<T = any, R = any>(params: RequestParams<T>): Promise<R> {
     return new Promise<R>((resolve, reject) => {
-      if (params.init) {
-        const res: any = params.data;
-
-        resolve({
+      if (params) {
+        const data: any = params.data;
+        const httpResponse: R = {
+          response: data,
           status: 200,
-          headers: {
-            get() {
-              return 'application/json; charset=utf-8';
-            }
-          },
-          ok: true,
-          json: () =>
-            new Promise((resolve) => {
-              resolve(res);
-            })
-        } as any);
-      }
+          body: data
+        };
 
-      reject(new Error('error'));
+        resolve(httpResponse);
+      } else {
+        reject(new Error('params object is required'));
+      }
     });
   }
 
@@ -109,26 +94,18 @@ export class RequestSample implements IRequest {
    */
   public async put<T = any, R = any>(params: RequestParams<T>): Promise<R> {
     return new Promise<R>((resolve, reject) => {
-      if (params.init) {
-        const res: any = params.data;
-
-        resolve({
+      if (params) {
+        const data: any = params.data;
+        const httpResponse: R = {
+          response: data,
           status: 200,
-          headers: {
-            get() {
-              return 'application/json; charset=utf-8';
-            }
-          },
-          ok: true,
-          json: () => {
-            return new Promise((resolve) => {
-              resolve(res);
-            });
-          }
-        } as any);
-      }
+          body: data
+        };
 
-      reject(new Error('error'));
+        resolve(httpResponse);
+      } else {
+        reject(new Error('params object is required'));
+      }
     });
   }
 
@@ -141,37 +118,18 @@ export class RequestSample implements IRequest {
     params: RequestParams<T>
   ): Promise<R> {
     return new Promise<R>((resolve, reject) => {
-      if (params.init) {
-        const res: any = params.data;
-
-        resolve({
+      if (params) {
+        const data: any = params.data;
+        const httpResponse: R = {
+          response: data,
           status: 200,
-          headers: {
-            get() {
-              return 'application/json; charset=utf-8';
-            }
-          },
-          ok: true,
-          json: () => {
-            return new Promise((resolve) => {
-              resolve(res);
-            });
-          }
-        } as any);
+          body: data
+        };
+
+        resolve(httpResponse);
+      } else {
+        reject(new Error('params object is required'));
       }
-
-      reject(new Error('error'));
-    });
-  }
-
-  /**
-   *
-   * @param response
-   * @returns
-   */
-  public readResponse(response: Response): Promise<unknown> {
-    return new Promise((resolve) => {
-      resolve(response['json']());
     });
   }
 }

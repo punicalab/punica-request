@@ -37,8 +37,8 @@ export class ErrorMiddleware extends BaseMiddleware {
    * @param processData - The data to be processed.
    */
   public process = (processData: ProcessData) => {
-    const { response, reject } = processData;
-    const { status } = response;
+    const { httpResponse, reject } = processData;
+    const { status } = httpResponse;
 
     if (isHttpStatusOk(status)) {
       this.next(processData);
@@ -51,12 +51,15 @@ export class ErrorMiddleware extends BaseMiddleware {
     if (errorHandler == null) {
       this.#LOGGER('You should add the error message handler!');
       reject(processData);
+
       return;
     }
 
+    const { response } = httpResponse;
+
     // Attempt to read the response content based on the provided content type.
-    processData.response[contentType]()
-      .then((content) => {
+    response[contentType]()
+      .then((content: any) => {
         processData.body = content;
       })
       .catch(() => {

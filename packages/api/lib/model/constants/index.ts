@@ -1,3 +1,3 @@
-export * from './contentType';
-export * from './requestMethods';
-export * from './statusCodes';
+export * from './ContentType';
+export * from './RequestMethods';
+export * from './StatusCode';

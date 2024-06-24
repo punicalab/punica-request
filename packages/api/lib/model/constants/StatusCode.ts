@@ -1,4 +1,4 @@
-export type StatusCodes = {
+export enum StatusCode {
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.2.1}
    *
@@ -7,7 +7,7 @@ export type StatusCodes = {
    * server.  The server intends to send a final response after the
    * request has been fully received and acted upon.
    */
-  CONTINUE: 100;
+  CONTINUE = 100,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.2.2}
    *
@@ -19,7 +19,7 @@ export type StatusCodes = {
    * which protocol(s) will be switched to immediately after the empty
    * line that terminates the 101 response.
    */
-  SWITCHING_PROTOCOLS: 101;
+  SWITCHING_PROTOCOLS = 101,
   /**
    * @see {@link https://tools.ietf.org/html/rfc2518#section-10.1}
    *
@@ -32,7 +32,7 @@ export type StatusCodes = {
    the server SHOULD return a 102 (Processing) response. The server MUST
    send a final response after the request has been completed.
    */
-  PROCESSING: 102;
+  PROCESSING = 102,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.3.1}
    *
@@ -48,7 +48,7 @@ export type StatusCodes = {
    * * OPTIONS  a representation of the communications options;
    * * TRACE  a representation of the request message as received by the end server.
    */
-  OK: 200;
+  OK = 200,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.3.2}
    *
@@ -58,7 +58,7 @@ export type StatusCodes = {
    * by either a Location header field in the response or, if no Location
    * field is received, by the effective request URI.
    */
-  CREATED: 201;
+  CREATED = 201,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.3.3}
    *
@@ -69,7 +69,7 @@ export type StatusCodes = {
    * facility in HTTP for re-sending a status code from an asynchronous
    * operation.
    */
-  ACCEPTED: 202;
+  ACCEPTED = 202,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.3.4}
    *
@@ -82,7 +82,7 @@ export type StatusCodes = {
    * content might only be applicable along the same request path (through
    * the same proxies).
    */
-  NON_AUTHORITATIVE_INFORMATION: 203;
+  NON_AUTHORITATIVE_INFORMATION = 203,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.3.5}
    *
@@ -92,7 +92,7 @@ export type StatusCodes = {
    * response header fields refer to the target resource and its selected
    * representation after the requested action was applied.
    */
-  NO_CONTENT: 204;
+  NO_CONTENT = 204,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.3.6}
    *
@@ -101,7 +101,7 @@ export type StatusCodes = {
    * "document view", which caused the request to be sent, to its original
    * state as received from the origin server.
    */
-  RESET_CONTENT: 205;
+  RESET_CONTENT = 205,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7233#section-4.1}
    *
@@ -111,14 +111,14 @@ export type StatusCodes = {
    * correspond to the satisfiable ranges found in the request's Range
    * header field.
    */
-  PARTIAL_CONTENT: 206;
+  PARTIAL_CONTENT = 206,
   /**
    * @see {@link https://tools.ietf.org/html/rfc2518#section-10.2}
    *
    * @description The 207 (Multi-Status) status code provides status for multiple
    * independent operations.
    */
-  MULTI_STATUS: 207;
+  MULTI_STATUS = 207,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.4.1}
    *
@@ -131,7 +131,7 @@ export type StatusCodes = {
    * engage in reactive negotiation to select the most appropriate
    * representation(s) for its needs.
    */
-  MULTIPLE_CHOICES: 300;
+  MULTIPLE_CHOICES = 300,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.4.2}
    *
@@ -142,7 +142,7 @@ export type StatusCodes = {
    * references to the effective request URI to one or more of the new
    * references sent by the server, where possible.
    */
-  MOVED_PERMANENTLY: 301;
+  MOVED_PERMANENTLY = 301,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.4.3}
    *
@@ -151,7 +151,7 @@ export type StatusCodes = {
    * might be altered on occasion, the client ought to continue to use the
    * effective request URI for future requests.
    */
-  MOVED_TEMPORARILY: 302;
+  MOVED_TEMPORARILY = 302,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.4.4}
    *
@@ -165,7 +165,7 @@ export type StatusCodes = {
    * in the Location header field is not considered equivalent to the
    * effective request URI.
    */
-  SEE_OTHER: 303;
+  SEE_OTHER = 303,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7232#section-4.1}
    *
@@ -179,14 +179,14 @@ export type StatusCodes = {
    * therefore redirecting the client to make use of that stored
    * representation as if it were the payload of a 200 (OK) response.
    */
-  NOT_MODIFIED: 304;
+  NOT_MODIFIED = 304,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.4.5}
    *
    * @description The 305 (Use Proxy) status code was defined in a previous version of
    * this specification and is now deprecated (Appendix B).
    */
-  USE_PROXY: 305;
+  USE_PROXY = 305,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.4.7}
    *
@@ -197,7 +197,7 @@ export type StatusCodes = {
    * the client ought to continue using the original effective request URI
    * for future requests.
    */
-  TEMPORARY_REDIRECT: 307;
+  TEMPORARY_REDIRECT = 307,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7538#section-3}
    *
@@ -208,7 +208,7 @@ export type StatusCodes = {
    * references to the effective request URI (Section 5.5 of [RFC7230]) to
    * one or more of the new references sent by the server, where possible.
    */
-  PERMANENT_REDIRECT: 308;
+  PERMANENT_REDIRECT = 308,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.5.1}
    *
@@ -217,7 +217,7 @@ export type StatusCodes = {
    * a client error (e.g., malformed request syntax, invalid request
    * message framing, or deceptive request routing).
    */
-  BAD_REQUEST: 400;
+  BAD_REQUEST = 400,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7235#section-3.1}
    *
@@ -227,13 +227,13 @@ export type StatusCodes = {
    * a WWW-Authenticate header field (Section 4.1) containing at least one
    * challenge applicable to the target resource.
    */
-  UNAUTHORIZED: 401;
+  UNAUTHORIZED = 401,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.5.2}
    *
    * @description The 402 (Payment Required) status code is reserved for future use.
    */
-  PAYMENT_REQUIRED: 402;
+  PAYMENT_REQUIRED = 402,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.5.3}
    *
@@ -242,7 +242,7 @@ export type StatusCodes = {
    * make public why the request has been forbidden can describe that
    * reason in the response payload (if any).
    */
-  FORBIDDEN: 403;
+  FORBIDDEN = 403,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.5.4}
    *
@@ -254,7 +254,7 @@ export type StatusCodes = {
    * origin server knows, presumably through some configurable means, that
    * the condition is likely to be permanent.
    */
-  NOT_FOUND: 404;
+  NOT_FOUND = 404,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.5.5}
    *
@@ -264,7 +264,7 @@ export type StatusCodes = {
    * Allow header field in a 405 response containing a list of the target
    * resource's currently supported methods.
    */
-  METHOD_NOT_ALLOWED: 405;
+  METHOD_NOT_ALLOWED = 405,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.5.6}
    *
@@ -274,7 +274,7 @@ export type StatusCodes = {
    * header fields received in the request, and the server
    * is unwilling to supply a default representation.
    */
-  NOT_ACCEPTABLE: 406;
+  NOT_ACCEPTABLE = 406,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7235#section-3.2}
    *
@@ -286,7 +286,7 @@ export type StatusCodes = {
    * repeat the request with a new or replaced Proxy-Authorization header
    * field.
    */
-  PROXY_AUTHENTICATION_REQUIRED: 407;
+  PROXY_AUTHENTICATION_REQUIRED = 407,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.5.7}
    *
@@ -297,7 +297,7 @@ export type StatusCodes = {
    * the connection rather than continue waiting.  If the client has an outstanding
    * request in transit, the client MAY repeat that request on a new connection.
    */
-  REQUEST_TIMEOUT: 408;
+  REQUEST_TIMEOUT = 408,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.5.8}
    *
@@ -308,7 +308,7 @@ export type StatusCodes = {
    * SHOULD generate a payload that includes enough information for a user
    * to recognize the source of the conflict.
    */
-  CONFLICT: 409;
+  CONFLICT = 409,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.5.9}
    *
@@ -319,7 +319,7 @@ export type StatusCodes = {
    * is permanent, the status code 404 (Not Found) ought to be used
    * instead.
    */
-  GONE: 410;
+  GONE = 410,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.5.10}
    *
@@ -328,7 +328,7 @@ export type StatusCodes = {
    * The client MAY repeat the request if it adds a valid Content-Length
    * header field containing the length of the message body in the request message.
    */
-  LENGTH_REQUIRED: 411;
+  LENGTH_REQUIRED = 411,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7232#section-4.2}
    *
@@ -339,7 +339,7 @@ export type StatusCodes = {
    * representations and metadata) and, thus, prevent the request method
    * from being applied if the target resource is in an unexpected state.
    */
-  PRECONDITION_FAILED: 412;
+  PRECONDITION_FAILED = 412,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.5.11}
    *
@@ -348,7 +348,7 @@ export type StatusCodes = {
    * than the server is willing or able to process.  The server MAY close
    * the connection to prevent the client from continuing the request.
    */
-  REQUEST_TOO_LONG: 413;
+  REQUEST_TOO_LONG = 413,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.5.12}
    *
@@ -361,7 +361,7 @@ export type StatusCodes = {
    * itself) or when the server is under attack by a client attempting to
    * exploit potential security holes.
    */
-  REQUEST_URI_TOO_LONG: 414;
+  REQUEST_URI_TOO_LONG = 414,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.5.13}
    *
@@ -372,7 +372,7 @@ export type StatusCodes = {
    * Content-Type or Content-Encoding, or as a result of inspecting the
    * data directly.
    */
-  UNSUPPORTED_MEDIA_TYPE: 415;
+  UNSUPPORTED_MEDIA_TYPE = 415,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7233#section-4.4}
    *
@@ -382,7 +382,7 @@ export type StatusCodes = {
     requested has been rejected due to invalid ranges or an excessive
     request of small or overlapping ranges.
    */
-  REQUESTED_RANGE_NOT_SATISFIABLE: 416;
+  REQUESTED_RANGE_NOT_SATISFIABLE = 416,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.5.14}
    *
@@ -390,7 +390,7 @@ export type StatusCodes = {
    * expectation given in the request's Expect header field
    * could not be met by at least one of the inbound servers.
    */
-  EXPECTATION_FAILED: 417;
+  EXPECTATION_FAILED = 417,
   /**
    * @see {@link https://tools.ietf.org/html/rfc2324#section-2.3.2}
    *
@@ -398,7 +398,7 @@ export type StatusCodes = {
    * code "418 I'm a teapot". The resulting entity body MAY be short and
    * stout.
    */
-  IM_A_TEAPOT: 418;
+  IM_A_TEAPOT = 418,
   /**
    * @see {@link https://datatracker.ietf.org/doc/html/rfc7540#section-9.1.2}
    *
@@ -408,7 +408,7 @@ export type StatusCodes = {
    * responses for the combination of scheme and authority that are
    * included in the request URI.
    */
-  MISDIRECTED_REQUEST: 421;
+  MISDIRECTED_REQUEST = 421,
   /**
    * @see {@link https://tools.ietf.org/html/rfc2518#section-10.3}
    *
@@ -421,14 +421,14 @@ export type StatusCodes = {
    * request body contains well-formed (i.e., syntactically correct), but
    * semantically erroneous XML instructions.
    */
-  UNPROCESSABLE_ENTITY: 422;
+  UNPROCESSABLE_ENTITY = 422,
   /**
    * @see {@link https://tools.ietf.org/html/rfc2518#section-10.4}
    *
    * @description The 423 (Locked) status code means the source or destination resource
    * of a method is locked.
    */
-  LOCKED: 423;
+  LOCKED = 423,
   /**
    * @see {@link https://tools.ietf.org/html/rfc2518#section-10.5}
    *
@@ -438,21 +438,21 @@ export type StatusCodes = {
    * command in a PROPPATCH method fails then, at minimum, the rest of the
    * commands will also fail with 424 (Failed Dependency).
    */
-  FAILED_DEPENDENCY: 424;
+  FAILED_DEPENDENCY = 424,
   /**
    * @see {@link https://tools.ietf.org/html/rfc6585#section-3}
    *
    * @description The 428 status code indicates that the origin server requires the
    * request to be conditional.
    */
-  PRECONDITION_REQUIRED: 428;
+  PRECONDITION_REQUIRED = 428,
   /**
    * @see {@link https://tools.ietf.org/html/rfc6585#section-4}
    *
    * @description The 429 status code indicates that the user has sent too many
    * requests in a given amount of time ("rate limiting").
    */
-  TOO_MANY_REQUESTS: 429;
+  TOO_MANY_REQUESTS = 429,
   /**
    * @see {@link https://tools.ietf.org/html/rfc6585#section-5}
    *
@@ -460,7 +460,7 @@ export type StatusCodes = {
    * the request because its header fields are too large.  The request MAY
    * be resubmitted after reducing the size of the request header fields.
    */
-  REQUEST_HEADER_FIELDS_TOO_LARGE: 431;
+  REQUEST_HEADER_FIELDS_TOO_LARGE = 431,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.6.1}
    *
@@ -468,7 +468,7 @@ export type StatusCodes = {
    * encountered an unexpected condition that prevented it from fulfilling
    * the request.
    */
-  INTERNAL_SERVER_ERROR: 500;
+  INTERNAL_SERVER_ERROR = 500,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.6.2}
    *
@@ -477,7 +477,7 @@ export type StatusCodes = {
    * is the appropriate response when the server does not recognize the
    * request method and is not capable of supporting it for any resource.
    */
-  NOT_IMPLEMENTED: 501;
+  NOT_IMPLEMENTED = 501,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.6.3}
    *
@@ -485,7 +485,7 @@ export type StatusCodes = {
    * acting as a gateway or proxy, received an invalid response from an
    * inbound server it accessed while attempting to fulfill the request.
    */
-  BAD_GATEWAY: 502;
+  BAD_GATEWAY = 502,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.6.4}
    *
@@ -496,7 +496,7 @@ export type StatusCodes = {
    * to suggest an appropriate amount of time for the client to wait
    * before retrying the request.
    */
-  SERVICE_UNAVAILABLE: 503;
+  SERVICE_UNAVAILABLE = 503,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.6.5}
    *
@@ -505,7 +505,7 @@ export type StatusCodes = {
    * from an upstream server it needed to access in order to complete the
    * request.
    */
-  GATEWAY_TIMEOUT: 504;
+  GATEWAY_TIMEOUT = 504,
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.6.6}
    *
@@ -513,7 +513,7 @@ export type StatusCodes = {
    * server does not support, or refuses to support, the major version of
    * HTTP that was used in the request message.
    */
-  HTTP_VERSION_NOT_SUPPORTED: 505;
+  HTTP_VERSION_NOT_SUPPORTED = 505,
   /**
    * @see {@link https://tools.ietf.org/html/rfc2518#section-10.6}
    *
@@ -525,12 +525,12 @@ export type StatusCodes = {
    * request MUST NOT be repeated until it is requested by a separate user
    * action.
    */
-  INSUFFICIENT_STORAGE: 507;
+  INSUFFICIENT_STORAGE = 507,
   /**
    * @see {@link https://tools.ietf.org/html/rfc6585#section-6}
    *
    * @description The 511 status code indicates that the client needs to authenticate
    * to gain network access.
    */
-  NETWORK_AUTHENTICATION_REQUIRED: 511;
-};
+  NETWORK_AUTHENTICATION_REQUIRED = 511
+}

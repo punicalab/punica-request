@@ -1,21 +1,24 @@
 import { Notifier } from '../../utils';
 import { IConfig } from '../config';
 import { RequestParams } from '../request';
+import { HttpResponse } from '..';
 
 /**
  * Type representing the data to be processed by middleware.
  *
  * This type is used to pass relevant data through the middleware chain. Each middleware
- * can access and modify this data as needed, and it includes information about the request,
+ * can access and modify this data as needed. It includes information about the request,
  * response, and mechanisms for resolving or rejecting the associated Promise.
  */
-export type ProcessData = {
+export type ProcessData<T = any> = {
   /**
    * Configuration information for the request.
    *
    * This property contains the configuration settings used for making the request.
    * It includes details such as headers, method, base URL, and any other settings
    * required to configure the request properly.
+   *
+   * @type {IConfig}
    */
   config: IConfig;
 
@@ -24,6 +27,8 @@ export type ProcessData = {
    *
    * This property includes the parameters associated with the request, such as the
    * endpoint path, query parameters, and any additional settings specific to the request.
+   *
+   * @type {RequestParams<any>}
    */
   params: RequestParams<any>;
 
@@ -31,19 +36,24 @@ export type ProcessData = {
    * The response object received from the request.
    *
    * This property holds the response object returned by the server after the request
-   * is made. It includes details such as status, headers, and the response body.
+   * is made. It includes details such as the body, status, and the full response object.
    * This property is optional because it may not be available until the request is completed.
+   *
+   * @type {HttpResponse}
    */
-  response?: Response;
+  httpResponse?: HttpResponse<T>;
 
   /**
-   * The body of the response.
+   * Notifier mechanism for monitoring operation outcomes.
    *
-   * This property contains the actual data returned in the response body. It is often
-   * the parsed JSON or text data received from the server. This property is optional
-   * because it may not be available until the response is processed.
+   * This property includes an instance of the Notifier class, which is used to manage
+   * subscribers and notify them of any data updates. This mechanism is particularly
+   * useful for tracking and handling the results of middleware processing, allowing
+   * various components to react to changes and updates.
+   *
+   * @type {Notifier}
    */
-  body?: any;
+  notifier: Notifier;
 
   /**
    * A function to resolve the Promise associated with the request.
@@ -54,6 +64,7 @@ export type ProcessData = {
    * successfully processed.
    *
    * @param data - The data to be passed to the Promise's `then` handler.
+   * @type {(data?: unknown) => void}
    */
   resolve: (data?: unknown) => void;
 
@@ -66,16 +77,13 @@ export type ProcessData = {
    * processing the request.
    *
    * @param reason - The reason for rejecting the Promise.
+   * @type {(reason?: unknown) => void}
    */
   reject: (reason?: unknown) => void;
 
   /**
-   * Notifier mechanism for monitoring operation outcomes.
-   *
-   * This property includes an instance of the Notifier class, which is used to manage
-   * subscribers and notify them of any data updates. This mechanism is particularly
-   * useful for tracking and handling the results of middleware processing, allowing
-   * various components to react to changes and updates.
+   * Additional properties that can be used as needed.
+   * This allows for extending the parameters with custom properties.
    */
-  notifier: Notifier;
+  [key: string]: any;
 };

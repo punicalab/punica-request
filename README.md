@@ -2,39 +2,65 @@
 
 Welcome to the documentation for our open-source promise-based HTTP request library! This library is designed to offer a flexible, extensible, and efficient solution for making HTTP requests in various environments, including the browser (via XHR and Fetch) and Node.js (using the HTTP module).
 
+Empower your development team with our framework-independent library, designed to streamline and enhance your API interactions across diverse environments. This promise-based solution ensures modularity, maintainability, and seamless integration with your existing workflows.
+
 ## Key Features
 
-1. **Adapter Pattern** The library uses an adapter pattern, allowing you to easily switch between different underlying implementations such as XHR, Fetch, or Node.js's HTTP class. This provides a unified API for making HTTP requests regardless of the environment you're working in. To switch adapters, simply configure the library with your desired adapter during initialization. Check the setup section for detailed instructions.
+### 🔄 Adapter Pattern
 
-2. **Promise-based** Built on JavaScript promises, the library ensures that asynchronous operations are handled smoothly. Promises make it easier to work with asynchronous code and integrate seamlessly with modern JavaScript, providing a clean and manageable way to handle HTTP requests and responses. Familiarize yourself with JavaScript promises and async/await syntax to fully leverage the power of this library.
+The library uses an **adapter pattern**, allowing you to easily switch between different underlying implementations such as XHR, Fetch, or Node.js’s HTTP class. This provides a **unified API** for making HTTP requests regardless of the environment you’re working in. To switch adapters, simply configure the library with your desired adapter during initialization. Check the setup section for detailed instructions.
 
-3. **Middleware System** One of the standout features of our library is its middleware system. You can create and manage both request and response middlewares using linked list structures. This allows for powerful and flexible manipulation and handling of HTTP requests and responses. Whether you need to log requests, handle authentication, transform data, or implement error handling, our middleware system provides a straightforward way to extend and control the behavior of your HTTP operations.
+### 🏗️ Promise-based
 
-4. **TypeScript Support** The library offers full TypeScript support with comprehensive type definitions, ensuring better error checking and autocompletion during development. If you are using TypeScript, review and include the type definition files in your project setup.
+Built on JavaScript **promises**, the library ensures that asynchronous operations are handled smoothly. Promises make it easier to work with asynchronous code and integrate seamlessly with modern JavaScript, providing a **clean and manageable** way to handle HTTP requests and responses. Familiarize yourself with JavaScript promises and async/await syntax to fully leverage the power of this library.
 
-5. **Flexible Configuration** The library allows for both global and per-request configurations. This enables you to set default settings and easily override them for individual requests. Refer to the configuration section for detailed information on available options.
+### 🔧 Middleware System
 
-6. **Built-in Error Handling** Offers comprehensive error handling features to easily catch and manage errors. Create custom error handlers and add error management middleware as needed.
+One of the standout features of our library is its **middleware system**. You can create and manage both request and response middlewares using linked list structures. This allows for powerful and flexible manipulation and handling of HTTP requests and responses. Whether you need to log requests, handle authentication, transform data, or implement error handling, our middleware system provides a straightforward way to extend and control the behavior of your HTTP operations.
 
-7. **Handling JSON and Other Data Types** While it makes working with JSON data easy, it also supports other data types. Create custom error handlers and add error management middleware as needed.
+### 📘 TypeScript Support
 
-8. **Cancelable Requests** Provides the ability to cancel ongoing HTTP requests, which is particularly useful in scenarios where user interactions change rapidly. Utilize cancellation tokens to create cancelable requests.
+The library offers full **TypeScript support** with comprehensive type definitions, ensuring better error checking and autocompletion during development. If you are using TypeScript, review and include the type definition files in your project setup.
+
+### ⚙️ Flexible Configuration
+
+The library allows for both **global and per-request configurations**. This enables you to set default settings and easily override them for individual requests. Refer to the configuration section for detailed information on available options.
+
+### 🛠️ Built-in Error Handling
+
+Offers comprehensive error **handling features** to easily catch and manage errors. Create custom error handlers and add error management middleware as needed.
+
+### ❌ Cancelable Requests
+
+Provides the ability to **cancel ongoing HTTP requests**, which is particularly useful in scenarios where user interactions change rapidly. Utilize cancellation tokens to create cancelable requests.
 
 ## How It Works
 
-The library's core is built around the concept of adapters and middlewares:
+The library's core is built around the concept of **adapters** and **middlewares**:
 
-- **Adapters:** Adapters are classes that implement a common interface for sending HTTP requests. Depending on your environment, you can choose an appropriate adapter (XHR, Fetch, or Node HTTP) that suits your needs. This design ensures that your code remains consistent and adaptable across different platforms.
+**Adapters:**
 
-- **Middleware:** Middleware functions act as interceptors that can process requests and responses before they are handled by the final adapter. Middlewares are organized in a linked list structure, allowing for sequential execution. You can easily add, remove, or modify middleware to tailor the behavior of your HTTP requests.
+Adapters are classes that implement a common interface for sending HTTP requests. Depending on your environment, you can choose an appropriate adapter (XHR, Fetch, or Node HTTP) that suits your needs. This design ensures that your code remains consistent and adaptable across different platforms.
+
+**Middleware:**
+
+Middleware functions act as interceptors that can process requests and responses before they are handled by the final adapter. Middlewares are organized in a linked list structure, allowing for sequential execution. You can easily add, remove, or modify middleware to tailor the behavior of your HTTP requests.
 
 ## Benefits
 
-- **Flexibility:** The adapter pattern and middleware system provide unparalleled flexibility, allowing you to customize and extend the library to fit your specific use cases.
+**🌐 Flexibility:**
 
-- **Consistency:** With a unified API across different environments, you can write code that is consistent and easy to maintain.
+The adapter pattern and middleware system provide unparalleled flexibility, allowing you to customize and extend the library to fit your specific use cases.
 
-- **Ease of Use:** The promise-based approach simplifies asynchronous programming, making it easier to write, read, and debug your code.
+**📏 Consistency**
+
+With a unified API across different environments, you can write code that is consistent and easy to maintain.
+
+**🤖 Ease of Use**
+
+The promise-based approach simplifies asynchronous programming, making it easier to write, read, and debug your code.
+
+**🛠️ Framework Independence**
 
 # Basic Usage
 
@@ -56,35 +82,30 @@ import { TokenAuthMiddleware } from '@punica/request-middleware';
  */
 const createService = (hostname: string): RequestAPI => {
   const config: IConfig = {
-    request: {
-      hostname,
-      requestInit: {
-        mode: "cors",
-        headers: {
-          "Content-Type": "application/json",
-        },
+    hostname,
+    requestInit: {
+      mode: "cors",
+      headers: {
+        "Content-Type": "application/json",
       },
     },
-    middleware: {
-      request: [
-        new TokenAuthMiddleware({ cookieName: "token", headerName: "Authorization" }),
-      ],
-      response: [
-        new CacheResponseMiddleware({ storage }),
-        new ErrorMiddleware({
-          contentType: 'json',
-          error: {
-            400: error400,
-            500: error500,
-            401: error401,
-            403: error403,
-            404: error404,
-            409: error409
-          }
-        })
-      ]
-    }
-
+    requestMiddlewares: [
+      new TokenAuthMiddleware({ cookieName: "token", headerName: "Authorization" }),
+    ],
+    responseMiddlewares: [
+      new CacheResponseMiddleware({ storage }),
+      new ErrorMiddleware({
+        contentType: 'json',
+        error: {
+          400: error400,
+          500: error500,
+          401: error401,
+          403: error403,
+          404: error404,
+          409: error409
+        }
+      })
+    ]
   };
 
   return new RequestAPI(new APIFetch(), config);
@@ -108,7 +129,7 @@ Deletes an item with the specified itemId.
  * @returns {Promise<Response>} The response from the server.
  */
 const deleteOperation = async (itemId: string) => {
-  const res = await SERVICE.delete({
+  const res: HttpResponse = await SERVICE.delete({
     path: `items/${itemId}`
   });
 
@@ -127,7 +148,7 @@ Retrieves a list of items based on the specified search parameters.
  * @returns {Promise<Response>} The response from the server.
  */
 const getOperation = async (searchParams: URLSearchParams) => {
-  const res = await SERVICE.get({
+  const res: HttpResponse = await SERVICE.get({
     path: `items`,
     query: searchParams,
     contentType: 'json'
@@ -148,7 +169,7 @@ Creates a new item with the provided data.
  * @returns {Promise<Response>} The response from the server.
  */
 const postOperation = async (data: Model) => {
-  const res = await SERVICE.post({
+  const res: HttpResponse = await SERVICE.post({
     path: `items`,
     data: JSON.stringify(data),
     contentType: 'json'
@@ -170,7 +191,7 @@ Updates an existing item with the specified itemId and data.
  * @returns {Promise<Response>} The response from the server.
  */
 const putOperation = async (itemId: string, data: Model) => {
-  const res = await SERVICE.put({
+  const res: HttpResponse = await SERVICE.put({
     path: `items/${itemId}`,
     data: JSON.stringify(data),
     contentType: 'json'
@@ -192,11 +213,47 @@ Partially updates an existing item with the specified itemId and data.
  * @returns {Promise<Response>} The response from the server.
  */
 const patchOperation = async (itemId: string, data: Array<IPatch>) => {
-  const res = await SERVICE.patch({
+  const res: HttpResponse = await SERVICE.patch({
     path: `items/${itemId}`,
     data: JSON.stringify(data)
   });
 
   return res;
 };
+```
+
+#### IPatch Interface
+
+The IPatch interface represents the structure of a JSON Patch operation, which is used to partially update an existing item. JSON Patch is a format for expressing a sequence of operations to be applied to a target JSON document. Each operation in a patch is represented by an object conforming to this interface.
+
+#### Properties
+
+- **op:** 'test' | 'remove' | 'add' | 'replace' | 'move' | 'copy'
+  - The operation to be performed. It can be one of the following:
+    - **'test':** Tests that a value at the target location is equal to a specified value.
+    - **'remove':** Removes a value at the target location.
+    - **'add':** Adds a value to the target location.
+    - **'replace':** Replaces a value at the target location with a new value.
+    - **'move':** Moves a value from one location to another within the target.
+    - **'copy':** Copies a value from one location to another within the target.
+- **path:** string
+  - The location within the target document where the operation is performed. This is specified as a JSON Pointer.
+- **value:** any
+  - The value to be used within the operation. Required for add, replace, and test operations. The type of value can vary depending on the context of the operation.
+- **from:** string (optional)
+  - The source location for move and copy operations. This is specified as a JSON Pointer.
+
+#### Example
+
+Here is an example of a JSON Patch document using the IPatch interface:
+
+```typescript
+const patchOperations: IPatch[] = [
+  { op: 'replace', path: '/name', value: 'New Name' },
+  { op: 'add', path: '/newField', value: 'New Value' },
+  { op: 'remove', path: '/oldField' },
+  { op: 'move', path: '/newLocation', from: '/oldLocation' },
+  { op: 'copy', path: '/copiedField', from: '/originalField' },
+  { op: 'test', path: '/status', value: 'active' }
+];
 ```

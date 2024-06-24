@@ -42,10 +42,14 @@ export class StorageIndexedDB implements IStorage {
     requestURL: string,
     contentType: ContentType,
     body: unknown,
-    expireTime: number
+    expireTime?: number
   ): Promise<boolean> => {
     return new Promise((resolve) => {
-      const expirationTime = Date.now() + expireTime;
+      let expirationTime: number = null;
+
+      if (expireTime) {
+        expirationTime = Date.now() + expireTime;
+      }
 
       OperationDatabase.getDatabase().then((db) => {
         insertOperation(db, {

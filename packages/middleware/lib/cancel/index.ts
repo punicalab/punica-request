@@ -38,7 +38,7 @@ export class CancelRequestMiddleware extends BaseMiddleware {
    */
   public process = async (processData: ProcessData) => {
     const { config, params, notifier, reject } = processData;
-    const hostname = config.request;
+    const { hostname } = config;
     const { path } = params;
     const URL = `${hostname}${path || ''}`;
 
@@ -94,7 +94,7 @@ export class CancelRequestMiddleware extends BaseMiddleware {
     } catch (error) {
       // Ensure controller is removed on error
       this.#controllers.delete(URL);
-      debugger;
+
       throw error;
     }
   };
