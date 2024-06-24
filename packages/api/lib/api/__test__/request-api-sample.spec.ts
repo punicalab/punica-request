@@ -32,7 +32,7 @@ describe('api sample', () => {
         contentType: 'json'
       })
       .then((d) => {
-        expect(d).toEqual({ data: '5' });
+        expect(d.payload).toEqual({ data: '5' });
       });
   });
 
@@ -44,7 +44,7 @@ describe('api sample', () => {
         contentType: 'json'
       })
       .then((d) => {
-        expect(d).toEqual({ data: '5' });
+        expect(d.payload).toEqual({ data: '5' });
       });
   });
 
@@ -52,7 +52,7 @@ describe('api sample', () => {
     return request
       .post({ path: 'url', data: { data: 5 }, contentType: 'json' })
       .then((d) => {
-        expect(d).toEqual({ data: 5 });
+        expect(d.payload).toEqual({ data: 5 });
       });
   });
 
@@ -60,7 +60,7 @@ describe('api sample', () => {
     return request
       .put({ path: 'url', data: { data: 5 }, contentType: 'json' })
       .then((d) => {
-        expect(d).toEqual({ data: 5 });
+        expect(d.payload).toEqual({ data: 5 });
       });
   });
 
@@ -72,7 +72,7 @@ describe('api sample', () => {
         contentType: 'json'
       })
       .then((d) => {
-        expect(d).toEqual([{ op: 'add', path: '' }]);
+        expect(d.payload).toEqual([{ op: 'add', path: '' }]);
       });
   });
 
