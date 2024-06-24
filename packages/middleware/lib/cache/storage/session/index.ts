@@ -48,10 +48,14 @@ export class StorageSession implements IStorage {
     requestURL: string,
     contentType: ContentType,
     body: unknown,
-    expireTime: number
+    expireTime?: number
   ): Promise<boolean> => {
     return new Promise((resolve) => {
-      const expirationTime = Date.now() + expireTime;
+      let expirationTime: number = null;
+
+      if (expireTime) {
+        expirationTime = Date.now() + expireTime;
+      }
 
       sessionStorage.setItem(
         requestURL,

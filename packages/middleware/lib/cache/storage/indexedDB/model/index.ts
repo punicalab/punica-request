@@ -23,5 +23,5 @@ export type Record = {
   // The content/body of the record.
   body: any;
   // The expire at of the record.
-  expireAt: number;
+  expireAt?: number;
 };

@@ -14,11 +14,9 @@ describe('api sample', () => {
   const sampleBMiddleware = new SampleBMiddleware();
   const sampleCMiddleware = new SampleCMiddleware();
   const config: IConfig = {
-    request: { hostname: 'http://host:port/api/' },
-    middleware: {
-      request: [sampleBMiddleware, sampleAMiddleware],
-      response: [sampleCMiddleware]
-    }
+    hostname: 'http://host:port/api/',
+    requestMiddlewares: [sampleBMiddleware, sampleAMiddleware],
+    responseMiddlewares: [sampleCMiddleware]
   };
 
   beforeAll(() => {
@@ -30,11 +28,11 @@ describe('api sample', () => {
     return request
       .get({
         path: 'url',
-        query: new URLSearchParams({ data: '5' }),
+        query: { data: '5' },
         contentType: 'json'
       })
       .then((d) => {
-        expect(d.get('data')).toEqual('5');
+        expect(d).toEqual({ data: '5' });
       });
   });
 
@@ -42,11 +40,11 @@ describe('api sample', () => {
     return request
       .delete({
         path: 'url',
-        query: new URLSearchParams({ data: '5' }),
+        query: { data: '5' },
         contentType: 'json'
       })
       .then((d) => {
-        expect(d.get('data')).toEqual('5');
+        expect(d).toEqual({ data: '5' });
       });
   });
 

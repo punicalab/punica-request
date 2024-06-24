@@ -38,7 +38,7 @@ export class CacheMiddleware extends BaseMiddleware {
    */
   public process = async (processData: ProcessData) => {
     const { storage } = this.#config;
-    const { params, resolve, notifier } = processData;
+    const { params, notifier, resolve } = processData;
     const { requestURL, cache, contentType } = params;
 
     if (!cache) {
@@ -58,9 +58,10 @@ export class CacheMiddleware extends BaseMiddleware {
         const subscriber: Subscriber = {
           key: 'cache',
           update: async (_processData: ProcessData) => {
-            const { body, response } = _processData;
+            const { response } = _processData;
+            const { status, body } = response;
             return new Promise(async (resolve, reject) => {
-              if (isHttpStatusOk(response.status)) {
+              if (isHttpStatusOk(status)) {
                 await storage.write(requestURL, contentType, body, expireTime); // Store response data in the cache
               }
 

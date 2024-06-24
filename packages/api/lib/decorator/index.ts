@@ -28,20 +28,19 @@ export const Middleware: MethodDecorator = (
         // Extract request parameters
         const params: RequestParams<any> = args[0];
         const { config } = this;
-        const { middleware, request } = config;
 
         // Create instances of main middleware, request middleware, and response middleware
         const mainMiddleware = new MainMiddleware(originalMethod, this);
-        const requestMiddleware = availableMiddlewareMethods(
+        const requestMiddlewares = availableMiddlewareMethods(
           originalMethod.name,
-          middleware?.request
+          config.requestMiddlewares
         );
-        const responseMiddleware = availableMiddlewareMethods(
+        const responseMiddlewares = availableMiddlewareMethods(
           originalMethod.name,
-          middleware?.response
+          config.responseMiddlewares
         );
 
-        let requestURL = `${request.hostname}${params.path || ''}`;
+        let requestURL = `${config.hostname}${params.path || ''}`;
         let queryParams = new URLSearchParams(params.query || {});
 
         // Construct the request URL with query parameters
@@ -72,9 +71,9 @@ export const Middleware: MethodDecorator = (
 
         // Combine all middleware into a list
         const middlewareList: Array<IMiddleware> = [
-          ...requestMiddleware,
+          ...requestMiddlewares,
           mainMiddleware,
-          ...responseMiddleware
+          ...responseMiddlewares
         ];
 
         // Set up middleware chain
