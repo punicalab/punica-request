@@ -26,14 +26,16 @@ export class RequestSample implements IRequest {
    * @param params
    * @returns
    */
-  public async get<T = any, R = any>(params: RequestParams<T>): Promise<R> {
-    return new Promise<R>((resolve, reject) => {
+  public async get<T = any, R = any>(
+    params: RequestParams<T>
+  ): Promise<HttpResponse<R>> {
+    return new Promise<HttpResponse<R>>((resolve, reject) => {
       if (params) {
         const res: any = params.query;
-        const httpResponse: R = {
+        const httpResponse: HttpResponse = {
           response: res,
           status: 200,
-          body: res
+          payload: res
         };
 
         resolve(httpResponse);
@@ -48,14 +50,16 @@ export class RequestSample implements IRequest {
    * @param params
    * @returns
    */
-  public async delete<T = any, R = any>(params: RequestParams<T>): Promise<R> {
-    return new Promise<R>((resolve, reject) => {
+  public async delete<T = any, R = any>(
+    params: RequestParams<T>
+  ): Promise<HttpResponse<R>> {
+    return new Promise<HttpResponse<R>>((resolve, reject) => {
       if (params) {
         const res: any = params.query;
-        const httpResponse: R = {
+        const httpResponse: HttpResponse = {
           response: res,
           status: 200,
-          body: res
+          payload: res
         };
 
         resolve(httpResponse);
@@ -70,14 +74,16 @@ export class RequestSample implements IRequest {
    * @param params
    * @returns
    */
-  public async post<T = any, R = any>(params: RequestParams<T>): Promise<R> {
-    return new Promise<R>((resolve, reject) => {
+  public async post<T = any, R = any>(
+    params: RequestParams<T>
+  ): Promise<HttpResponse<R>> {
+    return new Promise<HttpResponse<R>>((resolve, reject) => {
       if (params) {
         const data: any = params.data;
-        const httpResponse: R = {
+        const httpResponse: HttpResponse = {
           response: data,
           status: 200,
-          body: data
+          payload: data
         };
 
         resolve(httpResponse);
@@ -92,14 +98,16 @@ export class RequestSample implements IRequest {
    * @param params
    * @returns
    */
-  public async put<T = any, R = any>(params: RequestParams<T>): Promise<R> {
-    return new Promise<R>((resolve, reject) => {
+  public async put<T = any, R = any>(
+    params: RequestParams<T>
+  ): Promise<HttpResponse<R>> {
+    return new Promise<HttpResponse<R>>((resolve, reject) => {
       if (params) {
         const data: any = params.data;
-        const httpResponse: R = {
+        const httpResponse: HttpResponse = {
           response: data,
           status: 200,
-          body: data
+          payload: data
         };
 
         resolve(httpResponse);
@@ -116,14 +124,14 @@ export class RequestSample implements IRequest {
    */
   public async patch<T = Array<IPatch>, R = any>(
     params: RequestParams<T>
-  ): Promise<R> {
-    return new Promise<R>((resolve, reject) => {
+  ): Promise<HttpResponse<R>> {
+    return new Promise<HttpResponse<R>>((resolve, reject) => {
       if (params) {
         const data: any = params.data;
-        const httpResponse: R = {
+        const httpResponse: HttpResponse = {
           response: data,
           status: 200,
-          body: data
+          payload: data
         };
 
         resolve(httpResponse);
