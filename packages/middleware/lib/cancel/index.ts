@@ -79,7 +79,7 @@ export class CancelRequestMiddleware extends BaseMiddleware {
       // Define a subscriber to handle cleanup after the response is processed
       const subscriber: Subscriber = {
         key: 'cancel',
-        update: async (_processData: ProcessData) => {
+        update: async () => {
           return new Promise(async (resolve, reject) => {
             // After processing, remove the controller
             this.#controllers.delete(URL);
