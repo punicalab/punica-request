@@ -42,7 +42,9 @@ export class CacheMiddleware extends BaseMiddleware {
     const { requestURL, cache, contentType } = params;
 
     if (!cache) {
-      this.next(processData); // Continue to the next middleware if caching is disabled
+      // Continue to the next middleware if caching is disabled
+      this.next(processData);
+
       return;
     }
 
@@ -52,7 +54,7 @@ export class CacheMiddleware extends BaseMiddleware {
       const storedData = await storage.read(requestURL);
 
       if (storedData) {
-        resolve(storedData); // Resolve with cached data if available
+        resolve({ payload: storedData }); // Resolve with cached data if available
       } else {
         // Define a subscriber to cache the response data when updated
         const subscriber: Subscriber = {
