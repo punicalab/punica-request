@@ -58,11 +58,18 @@ export class CacheMiddleware extends BaseMiddleware {
         const subscriber: Subscriber = {
           key: 'cache',
           update: async (_processData: ProcessData) => {
-            const { response } = _processData;
-            const { status, body } = response;
-            return new Promise(async (resolve, reject) => {
+            const { httpResponse } = _processData;
+            const { status, payload } = httpResponse;
+
+            return new Promise(async (resolve) => {
               if (isHttpStatusOk(status)) {
-                await storage.write(requestURL, contentType, body, expireTime); // Store response data in the cache
+                // Store response data in the cache
+                await storage.write(
+                  requestURL,
+                  contentType,
+                  payload,
+                  expireTime
+                );
               }
 
               resolve();
