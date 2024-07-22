@@ -61,4 +61,14 @@ export interface IMiddleware {
    * @returns An array of HTTP methods supported by the middleware.
    */
   availableMethods(): Array<keyof RequestMethods>;
+
+  /**
+   * Method to determine if the middleware is active.
+   *
+   * This method returns a boolean indicating whether the middleware is active. If false, the middleware
+   * should skip its processing and pass control to the next middleware in the chain.
+   *
+   * @returns A boolean indicating whether the middleware is active.
+   */
+  isActive(): boolean;
 }

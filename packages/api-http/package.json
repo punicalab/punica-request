@@ -1,6 +1,6 @@
 {
   "name": "@punica/request-http",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Request Node http",
   "author": {
     "name": "Uryan Sezgin TEKE",
@@ -25,7 +25,7 @@
     "dist"
   ],
   "dependencies": {
-    "@punica/request": "^2.4.0"
+    "@punica/request": "^2.5.0"
   },
   "scripts": {
     "build": "scripty",
