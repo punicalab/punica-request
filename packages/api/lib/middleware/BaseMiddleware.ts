@@ -67,6 +67,19 @@ export abstract class BaseMiddleware implements IMiddleware {
   }
 
   /**
+   * Determines if the middleware is active.
+   *
+   * This method checks if the middleware should be active based on custom conditions.
+   * If false, the middleware will skip its processing and pass control to the next middleware in the chain.
+   *
+   * @returns A boolean indicating whether the middleware is active.
+   */
+  public isActive(): boolean {
+    // Check custom conditions to determine if the middleware is active
+    return true; // For example, this middleware is always active
+  }
+
+  /**
    * The main processing method of the middleware. Subclasses should fill the functionality of this method.
    * @param processData - Processed data
    */
