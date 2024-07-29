@@ -1,16 +1,51 @@
 import { IMiddleware, ProcessData, RequestMethods } from '..';
 
 /**
+ * Configuration interface for checking middleware activity status.
+ */
+export interface MiddlewareActivityConfig {
+  getActive?: () => boolean;
+}
+
+/**
+ * Configuration interface for specifying available HTTP methods for middleware.
+ */
+export interface MiddlewareMethodConfig {
+  getAvailableMethods?: () => Array<keyof RequestMethods>;
+}
+
+/**
+ * Combined configuration interface for middleware.
+ */
+export type MiddlewareConfig =
+  | MiddlewareActivityConfig
+  | MiddlewareMethodConfig
+  | (MiddlewareActivityConfig & MiddlewareMethodConfig);
+
+/**
  * Base class for middleware implementations. Implements common functionality and defines abstract method for processing.
  */
 export abstract class BaseMiddleware implements IMiddleware {
   #nextMiddleware: IMiddleware;
   #headMiddleware: IMiddleware;
+  #config: MiddlewareActivityConfig & MiddlewareMethodConfig;
 
   /**
    * Constructs a new BaseMiddleware instance.
+   * @param config - Configuration object for the middleware.
    */
-  constructor() {}
+  constructor(
+    config:
+      | MiddlewareActivityConfig
+      | MiddlewareMethodConfig
+      | MiddlewareConfig = {}
+  ) {
+    this.#config = {
+      getActive: (config as MiddlewareActivityConfig).getActive,
+      getAvailableMethods: (config as MiddlewareMethodConfig)
+        .getAvailableMethods
+    };
+  }
 
   /**
    * Sets the next middleware in the chain.
@@ -22,7 +57,6 @@ export abstract class BaseMiddleware implements IMiddleware {
 
   /**
    * Gets the next middleware in the chain.
-   * @param middleware - The next middleware
    */
   get nextMiddleware() {
     return this.#nextMiddleware;
@@ -38,7 +72,6 @@ export abstract class BaseMiddleware implements IMiddleware {
 
   /**
    * Gets the head middleware in the chain.
-   * @param middleware - The head middleware
    */
   get headMiddleware() {
     return this.#headMiddleware;
@@ -60,10 +93,18 @@ export abstract class BaseMiddleware implements IMiddleware {
 
   /**
    * Returns the available HTTP methods.
-   * @returns Available HTTP methods
+   * @returns Available HTTP methods.
    */
   public availableMethods(): Array<keyof RequestMethods> {
-    return ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
+    return (
+      this.#config.getAvailableMethods?.() ?? [
+        'GET',
+        'POST',
+        'PUT',
+        'DELETE',
+        'PATCH'
+      ]
+    );
   }
 
   /**
@@ -75,8 +116,7 @@ export abstract class BaseMiddleware implements IMiddleware {
    * @returns A boolean indicating whether the middleware is active.
    */
   public isActive(): boolean {
-    // Check custom conditions to determine if the middleware is active
-    return true; // For example, this middleware is always active
+    return this.#config.getActive?.() ?? true;
   }
 
   /**

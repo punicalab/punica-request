@@ -2,8 +2,19 @@ import {
   BaseMiddleware,
   ContentType,
   ProcessData,
-  isHttpStatusOk
+  isHttpStatusOk,
+  MiddlewareConfig
 } from '@punica/request';
+
+/**
+ * Configuration object for ErrorMiddleware.
+ */
+interface ErrorConfig {
+  contentType: ContentType;
+  error: Record<number, (data: ProcessData) => Promise<void>>;
+}
+
+export type ErrorMiddlewareConfig = ErrorConfig & MiddlewareConfig;
 
 /**
  * ErrorMiddleware is a middleware class that handles errors in the HTTP response.
@@ -16,7 +27,7 @@ export class ErrorMiddleware extends BaseMiddleware {
    * @param config - The configuration for the ErrorMiddleware.
    */
   public constructor(config: ErrorMiddlewareConfig) {
-    super();
+    super(config);
 
     this.#config = config;
   }
@@ -75,11 +86,3 @@ export class ErrorMiddleware extends BaseMiddleware {
       });
   };
 }
-
-/**
- * Configuration object for ErrorMiddleware.
- */
-export type ErrorMiddlewareConfig = {
-  contentType: ContentType;
-  error: Record<number, (data: ProcessData) => Promise<void>>;
-};

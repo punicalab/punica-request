@@ -1,9 +1,18 @@
 import {
   BaseMiddleware,
   ProcessData,
-  RequestMethods,
-  Subscriber
+  Subscriber,
+  MiddlewareConfig
 } from '@punica/request';
+
+/**
+ * Configuration object for CancelRequestMiddleware.
+ */
+interface CancelConfig {
+  timeout?: number;
+}
+
+export type CancelRequestMiddlewareConfig = CancelConfig & MiddlewareConfig;
 
 /**
  * Middleware to handle request cancellations and timeouts.
@@ -18,18 +27,10 @@ export class CancelRequestMiddleware extends BaseMiddleware {
    * @param config - The configuration for the CancelRequestMiddleware.
    */
   constructor(config: CancelRequestMiddlewareConfig = {}) {
-    super();
+    super(config);
+
     this.#config = config;
     this.#controllers = new Map();
-  }
-
-  /**
-   * Returns the list of available HTTP methods supported by this middleware.
-   * Currently, only 'GET' is supported.
-   * @returns An array of supported HTTP methods.
-   */
-  public availableMethods(): Array<keyof RequestMethods> {
-    return ['GET'];
   }
 
   /**
@@ -106,8 +107,4 @@ export class CancelRequestMiddleware extends BaseMiddleware {
     this.#controllers.forEach((controller) => controller.abort());
     this.#controllers.clear();
   }
-}
-
-interface CancelRequestMiddlewareConfig {
-  timeout?: number;
 }

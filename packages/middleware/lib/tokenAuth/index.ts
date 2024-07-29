@@ -1,4 +1,20 @@
-import { BaseMiddleware, getCookie, ProcessData } from '@punica/request';
+import {
+  BaseMiddleware,
+  getCookie,
+  ProcessData,
+  MiddlewareConfig
+} from '@punica/request';
+
+/**
+ * Configuration object for TokenAuthMiddleware.
+ */
+interface TokenAuthConfig {
+  cookieName: string;
+  headerName: string;
+  tokenFormat?: string;
+}
+
+export type TokenAuthMiddlewareConfig = TokenAuthConfig & MiddlewareConfig;
 
 /**
  * TokenAuthMiddleware is a middleware class that handles authentication in the HTTP request.
@@ -11,7 +27,7 @@ export class TokenAuthMiddleware extends BaseMiddleware {
    * @param config - The configuration for the TokenAuthMiddleware.
    */
   public constructor(config: TokenAuthMiddlewareConfig) {
-    super();
+    super(config);
 
     this.#config = {
       ...config,
@@ -40,12 +56,3 @@ export class TokenAuthMiddleware extends BaseMiddleware {
     this.next(processData);
   };
 }
-
-/**
- * Configuration object for TokenAuthMiddleware.
- */
-type TokenAuthMiddlewareConfig = {
-  cookieName: string;
-  headerName: string;
-  tokenFormat?: string;
-};
