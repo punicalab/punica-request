@@ -1,4 +1,19 @@
-import { BaseMiddleware, getCookie, ProcessData } from '@punica/request';
+import {
+  BaseMiddleware,
+  getCookie,
+  ProcessData,
+  MiddlewareConfig
+} from '@punica/request';
+
+/**
+ * Configuration object for CookieMiddleware.
+ */
+interface CookieConfig {
+  cookieName: string;
+  headerName: string;
+}
+
+export type CookieMiddlewareConfig = CookieConfig & MiddlewareConfig;
 
 /**
  * CookieMiddleware is a middleware class that handles cookies in the HTTP request.
@@ -11,7 +26,7 @@ export class CookieMiddleware extends BaseMiddleware {
    * @param {CookieMiddlewareConfig} config - The configuration for the CookieMiddleware.
    */
   public constructor(config: CookieMiddlewareConfig) {
-    super();
+    super(config);
 
     this.#config = config;
   }
@@ -37,11 +52,3 @@ export class CookieMiddleware extends BaseMiddleware {
     this.next(processData);
   };
 }
-
-/**
- * Configuration object for CookieMiddleware.
- */
-type CookieMiddlewareConfig = {
-  cookieName: string;
-  headerName: string;
-};

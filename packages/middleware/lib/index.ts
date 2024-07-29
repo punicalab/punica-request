@@ -1,5 +1,6 @@
 export * from './cache';
-export * from './cancel';
+export * from './cancelRequest';
 export * from './cookie';
 export * from './error';
+export * from './refreshToken';
 export * from './tokenAuth';

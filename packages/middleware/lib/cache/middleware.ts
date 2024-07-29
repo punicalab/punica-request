@@ -4,8 +4,18 @@ import {
   RequestMethods,
   ProcessData,
   isHttpStatusOk,
-  Subscriber
+  Subscriber,
+  MiddlewareActivityConfig
 } from '@punica/request';
+
+/**
+ * Configuration object for CacheMiddleware.
+ */
+interface CacheConfig {
+  storage: IStorage;
+}
+
+export type CacheMiddlewareConfig = CacheConfig & MiddlewareActivityConfig;
 
 /**
  * CacheMiddleware is a middleware class that handles cache requests by checking for cached data.
@@ -18,7 +28,7 @@ export class CacheMiddleware extends BaseMiddleware {
    * @param config - The configuration for the CacheMiddleware.
    */
   constructor(config: CacheMiddlewareConfig) {
-    super();
+    super(config);
 
     this.#config = config;
   }
@@ -88,10 +98,3 @@ export class CacheMiddleware extends BaseMiddleware {
     }
   };
 }
-
-/**
- * Configuration object for CacheMiddleware.
- */
-type CacheMiddlewareConfig = {
-  storage: IStorage;
-};
