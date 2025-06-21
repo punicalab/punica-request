@@ -1,6 +1,6 @@
 {
   "name": "@punica/request-fetch",
-  "version": "2.6.1",
+  "version": "2.6.2",
   "description": "Request Fetch",
   "author": {
     "name": "Uryan Sezgin TEKE",
@@ -28,7 +28,7 @@
     "dist"
   ],
   "dependencies": {
-    "@punica/request": "^2.6.1"
+    "@punica/request": "^2.6.2"
   },
   "scripts": {
     "build": "scripty",
