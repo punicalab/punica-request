@@ -1,49 +1,29 @@
 /**
- * Deep-merges two configuration objects.
- * - Arrays are concatenated.
- * - Objects are merged recursively.
- * - Keys with null or undefined in either object are removed from the result.
- *
- * @param conf1 - The base configuration object.
- * @param conf2 - The overriding configuration object.
+ * Merges two configuration objects.
+ * @param conf1 - The first configuration object.
+ * @param conf2 - The second configuration object.
  * @returns The merged configuration object.
  */
-export const mergeConfig = (conf1: any, conf2: any): any => {
-  const result: Record<string, any> = {};
+export const mergeConfig = (conf1: any, conf2: any) => {
+  // Create copies of the configuration objects to avoid modifying the originals
+  conf1 = { ...(conf1 || {}) };
+  conf2 = { ...(conf2 || {}) };
 
-  const keys = new Set([
-    ...Object.keys(conf1 || {}),
-    ...Object.keys(conf2 || {})
-  ]);
-
-  for (const key of keys) {
-    const val1 = conf1?.[key];
-    const val2 = conf2?.[key];
-
-    // If both are null/undefined → skip
-    if (val1 == null && val2 == null) continue;
-
-    // If val2 is explicitly null or undefined → skip (delete/ignore key)
-    if (val2 == null) continue;
-
-    // If val2 is array → merge arrays
-    if (Array.isArray(val2)) {
-      result[key] = (Array.isArray(val1) ? val1 : []).concat(val2);
+  // Iterate over the keys of the second configuration object (conf2)
+  for (const key of Object.keys(conf2)) {
+    // If the value of a key is an array, concatenate it with the corresponding array in conf1
+    if (Array.isArray(conf2[key])) {
+      conf2[key] = conf1[key].concat(conf2[key]);
     }
-
-    // If val2 is an object → recursively merge
-    else if (typeof val2 === 'object' && !Array.isArray(val2)) {
-      result[key] = mergeConfig(
-        typeof val1 === 'object' && val1 != null ? val1 : {},
-        val2
-      );
-    }
-
-    // Otherwise, use val2
-    else {
-      result[key] = val2;
+    // If the value of a key is an object, recursively merge it with the corresponding object in conf1
+    else if (conf2[key] instanceof Object) {
+      Object.assign(conf2[key], mergeConfig(conf1[key], conf2[key]));
     }
   }
 
-  return result;
+  // Merge the modified conf2 back into conf1
+  Object.assign(conf1, conf2);
+
+  // Return the merged configuration object
+  return conf1;
 };

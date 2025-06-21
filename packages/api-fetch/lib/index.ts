@@ -5,7 +5,8 @@ import {
   mergeConfig,
   ContentType,
   IPatch,
-  HttpResponse
+  HttpResponse,
+  cleanNulls
 } from '@punica/request';
 
 /**
@@ -81,7 +82,7 @@ export class APIFetch implements IRequest {
     // Merged request configuration
     const { init, requestURL, data, contentType } = params;
     const { requestInit } = this.#config;
-    const config = mergeConfig(requestInit, init);
+    const config = cleanNulls(mergeConfig(requestInit, init));
 
     // Making the GET request using Fetch API
     const response: Response = await fetch(requestURL, {
@@ -104,7 +105,7 @@ export class APIFetch implements IRequest {
     // Merged request configuration
     const { init, requestURL, data, contentType } = params;
     const { requestInit } = this.#config;
-    const config = mergeConfig(requestInit, init);
+    const config = cleanNulls(mergeConfig(requestInit, init));
 
     // Making the DELETE request using Fetch API
     const response: Response = await fetch(requestURL, {
@@ -127,7 +128,7 @@ export class APIFetch implements IRequest {
     // Merged request configuration
     const { init, requestURL, data, contentType } = params;
     const { requestInit } = this.#config;
-    const config = mergeConfig(requestInit, init);
+    const config = cleanNulls(mergeConfig(requestInit, init));
 
     // Making the POST request using Fetch API
     const response: Response = await fetch(requestURL, {
@@ -150,7 +151,7 @@ export class APIFetch implements IRequest {
     // Merged request configuration
     const { init, requestURL, data, contentType } = params;
     const { requestInit } = this.#config;
-    const config = mergeConfig(requestInit, init);
+    const config = cleanNulls(mergeConfig(requestInit, init));
 
     // Making the PUT request using Fetch API
     const response: Response = await fetch(requestURL, {
@@ -173,7 +174,7 @@ export class APIFetch implements IRequest {
     // Merged request configuration
     const { init, requestURL, data, contentType } = params;
     const { requestInit } = this.#config;
-    const config = mergeConfig(requestInit, init);
+    const config = cleanNulls(mergeConfig(requestInit, init));
 
     // Making the PATCH request using Fetch API
     const response: Response = await fetch(requestURL, {
