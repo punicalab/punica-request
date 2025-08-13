@@ -36,9 +36,7 @@ export class APIHttp implements IRequest {
     return {
       hostname,
       path,
-      headers: {
-        ...config.headers
-      }
+      headers: config.headers as http.OutgoingHttpHeaders
     };
   }
 
