@@ -2,24 +2,19 @@ import { INDEX, OBJECT_STORE } from '../constants';
 import { Record } from '../model';
 
 /**
- * Retrieves a record from the IndexedDB database based on a specified URL.
- * @param db - The IndexedDB database instance.
- * @param url - The URL used to retrieve the record.
- * @returns A Promise that resolves to the record if found, or rejects if there's an error.
+ * The record of an address, or `undefined` when there is none.
+ * @param db - The database
+ * @param url - The address the record was stored for
  */
-export const getOperation = (db: IDBDatabase, url: string): Promise<Record> => {
+export const getOperation = (
+  db: IDBDatabase,
+  url: string
+): Promise<Record | undefined> => {
   return new Promise((resolve, reject) => {
     const txn = db.transaction(OBJECT_STORE, 'readonly');
-    const store = txn.objectStore(OBJECT_STORE);
-    const index = store.index(INDEX);
-    const query = index.get(url);
+    const query = txn.objectStore(OBJECT_STORE).index(INDEX).get(url);
 
-    query.onsuccess = () => {
-      resolve(query.result);
-    };
-
-    query.onerror = () => {
-      reject();
-    };
+    query.onsuccess = () => resolve(query.result);
+    query.onerror = () => reject(query.error);
   });
 };

@@ -1,67 +1,66 @@
 import { ContentType } from '@punica/request';
 import { IStorage } from '../../model';
 
+/** What session storage can keep: it holds text. */
+const KEPT: ContentType[] = ['json', 'text'];
+
 /**
- * StorageSession is an implementation of the IStorage interface for session storage.
- * It allows reading and writing data to the session storage.
+ * Keeps responses in the session storage of the browser: until the tab is
+ * closed. Payloads read as `json` or `text` are kept; a blob, an array
+ * buffer or form data cannot be written as text and is not cached.
  */
 export class StorageSession implements IStorage {
   /**
-   * Reads data from session storage based on the provided request URL.
-   * @param requestURL - The URL for which data is to be read from session storage.
+   * Reads data from session storage.
+   * @param requestURL - The key under which the data is stored.
    * @returns A Promise that resolves to the stored data or null if not found.
    */
-  public read = (requestURL: string): Promise<any> => {
-    return new Promise((resolve) => {
-      const readedData = sessionStorage.getItem(requestURL);
+  public read = async (requestURL: string): Promise<any> => {
+    const readedData = sessionStorage.getItem(requestURL);
 
-      if (!readedData) {
-        resolve(null);
-        return;
-      }
+    if (!readedData) return null;
 
-      const storedData = JSON.parse(readedData);
-      const { contentType, body, expireAt } = storedData;
+    try {
+      const { contentType, body, expireAt } = JSON.parse(readedData);
 
-      // Check if data has expired
       if (expireAt && Date.now() > expireAt) {
         sessionStorage.removeItem(requestURL); // Remove expired data from storage
-        resolve(null);
-      } else {
-        switch (contentType as ContentType) {
-          case 'json':
-            resolve(body);
-            break;
-        }
+
+        return null;
       }
-    });
+
+      return KEPT.includes(contentType) ? body : null;
+    } catch {
+      // Not written by this storage
+      return null;
+    }
   };
 
   /**
-   * Writes data to session storage for the provided request URL.
-   * @param requestURL - The URL to be associated with the stored data.
-   * @param contentType - The content type of the data.
+   * Writes data to session storage.
+   * @param requestURL - The key under which the data will be stored.
+   * @param contentType - The content type the payload was read as.
    * @param body - The data to be stored.
-   * @returns A Promise that resolves to true after the data is successfully stored.
+   * @param expireTime - The time after which the data should expire, in milliseconds.
+   * @returns A Promise that resolves to whether the data was stored.
    */
-  public write = (
+  public write = async (
     requestURL: string,
     contentType: ContentType,
     body: unknown,
     expireTime?: number
   ): Promise<boolean> => {
-    return new Promise((resolve) => {
-      let expirationTime: number = null;
+    if (!KEPT.includes(contentType)) return false;
 
-      if (expireTime) {
-        expirationTime = Date.now() + expireTime;
-      }
+    sessionStorage.setItem(
+      requestURL,
+      JSON.stringify({
+        contentType,
+        body,
+        expireAt: expireTime ? Date.now() + expireTime : null
+      })
+    );
 
-      sessionStorage.setItem(
-        requestURL,
-        JSON.stringify({ contentType, body, expireAt: expirationTime })
-      );
-      resolve(true);
-    });
+    return true;
   };
 }

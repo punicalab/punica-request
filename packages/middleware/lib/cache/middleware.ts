@@ -51,51 +51,48 @@ export class CacheMiddleware extends BaseMiddleware {
     const { params, notifier, resolve } = processData;
     const { requestURL, cache, contentType } = params;
 
+    // If caching is not enabled for this request, proceed to the next middleware
     if (!cache) {
-      // Continue to the next middleware if caching is disabled
       this.next(processData);
-
       return;
     }
 
+    let storedData: unknown = null;
+
     try {
-      const { expireTime } = cache;
-      // Check if the requested data is already stored in the cache
-      const storedData = await storage.read(requestURL);
-
-      if (storedData) {
-        resolve({ payload: storedData }); // Resolve with cached data if available
-      } else {
-        // Define a subscriber to cache the response data when updated
-        const subscriber: Subscriber = {
-          key: 'cache',
-          update: async (_processData: ProcessData) => {
-            const { httpResponse } = _processData;
-            const { status, payload } = httpResponse;
-
-            // eslint-disable-next-line no-async-promise-executor
-            return new Promise(async (resolve) => {
-              if (isHttpStatusOk(status)) {
-                // Store response data in the cache
-                await storage.write(
-                  requestURL,
-                  contentType,
-                  payload,
-                  expireTime
-                );
-              }
-
-              resolve();
-            });
-          }
-        };
-        // Subscribe to updates to cache the response data when available
-        notifier.addSubscriber(subscriber);
-
-        this.next(processData); // Continue processing the request
-      }
+      storedData = await storage.read(requestURL);
     } catch {
-      this.next(processData); // Proceed to the next middleware in case of errors
+      // A cache that cannot be read is an empty one: the request is sent
     }
+
+    if (storedData !== null && storedData !== undefined) {
+      // A whole response, as the one the request would have brought
+      resolve({ payload: storedData, status: 200, response: null });
+      return;
+    }
+
+    const { expireTime } = cache;
+    const subscriber: Subscriber = {
+      key: 'cache',
+      update: async ({ httpResponse }: ProcessData) => {
+        if (!isHttpStatusOk(httpResponse.status)) return;
+
+        try {
+          await storage.write(
+            requestURL,
+            contentType,
+            httpResponse.payload,
+            expireTime
+          );
+        } catch {
+          // The response is what was asked for; the cache is a convenience
+        }
+      }
+    };
+
+    // Subscribe to updates to cache the response data when available
+    notifier.addSubscriber(subscriber);
+
+    this.next(processData);
   };
 }

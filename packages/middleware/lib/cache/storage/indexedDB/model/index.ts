@@ -16,6 +16,9 @@ export type IndexedDBConection = {
  * Represents a record in the IndexedDB database.
  */
 export type Record = {
+  /** The address the response belongs to; the index of the store is on it. */
+  url: string;
+
   // The URL associated with the record.
   requestURL: string;
   // The content type of the record.

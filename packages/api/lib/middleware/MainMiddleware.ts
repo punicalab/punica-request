@@ -23,14 +23,18 @@ export class MainMiddleware extends BaseMiddleware {
    * @param processData - Processed data.
    */
   public process(processData: ProcessData): void {
-    this.#apiMethod
-      .apply(this.#target, [processData.params])
+    // A request that cannot be sent, and what a response middleware throws,
+    // end the request: without this it would never settle
+    new Promise<HttpResponse>((resolve) =>
+      resolve(this.#apiMethod.apply(this.#target, [processData.params]))
+    )
       .then(async (httpResponse: HttpResponse) => {
         processData.httpResponse = httpResponse;
 
         await processData.notifier.notifySubscribers(processData);
 
         this.next(processData);
-      });
+      })
+      .catch((error: unknown) => processData.reject(error));
   }
 }

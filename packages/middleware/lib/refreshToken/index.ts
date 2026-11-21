@@ -17,6 +17,13 @@ interface TokenProvider {
  */
 interface RefreshTokenConfig {
   tokenProvider: TokenProvider;
+
+  /**
+   * Requests whose 401 is not refreshed but goes on to the next middleware.
+   * A token provider that refreshes through the same API names its own
+   * request here: answered with a 401 it would wait for itself.
+   */
+  exclude?: (processData: ProcessData) => boolean;
 }
 
 export type RefreshTokenMiddlewareConfig = RefreshTokenConfig &
@@ -26,6 +33,8 @@ export class RefreshTokenMiddleware extends BaseMiddleware {
   #config: RefreshTokenMiddlewareConfig;
   #pendingRequests: ProcessData[] = [];
   #isRefreshing: boolean = false;
+  /** Requests that were sent again already. */
+  #retried = new WeakSet<ProcessData>();
 
   /**
    *
@@ -50,46 +59,72 @@ export class RefreshTokenMiddleware extends BaseMiddleware {
   }
 
   /**
-   * Refreshes the access token and retries the pending requests.
+   * Refreshes the token and sends the waiting requests again. When there is
+   * no new token they are not sent again: their 401 goes on to the next
+   * middleware, an `ErrorMiddleware` for example.
    */
   private async refreshAccessToken() {
     const { tokenProvider } = this.#config;
+    let refreshed: boolean;
+
     try {
-      await tokenProvider.refreshToken();
-
-      this.#pendingRequests.forEach((processData) => {
-        this.headMiddleware.process(processData);
-      });
-
-      this.#pendingRequests = [];
+      refreshed = await tokenProvider.refreshToken();
     } catch (error) {
       console.error('Failed to refresh access token:', error);
       this.clearPendingRequests(error);
+
+      return;
+    }
+
+    // Requests that fail from here on wait for the next refresh
+    const waiting = this.#pendingRequests;
+
+    this.#pendingRequests = [];
+
+    for (const processData of waiting) {
+      try {
+        if (refreshed === false) {
+          this.next(processData);
+        } else {
+          this.restart(processData);
+        }
+      } catch (error) {
+        processData.reject(error);
+      }
     }
   }
 
   /**
-   * Processes the middleware for the given request data.
-   * @param processData - The request data to process.
+   * Lets a response through, unless it is a 401: then the token is
+   * refreshed, once for every request that failed meanwhile, and the request
+   * is sent again. A request is sent again once; a second 401 goes on to the
+   * next middleware.
+   * @param processData - The request and its response
    */
   public process = async (processData: ProcessData) => {
-    if (isHttpStatusOk(processData.httpResponse.status)) {
+    const { status } = processData.httpResponse;
+
+    if (
+      isHttpStatusOk(status) ||
+      status !== 401 ||
+      this.#retried.has(processData) ||
+      this.#config.exclude?.(processData)
+    ) {
       this.next(processData);
       return;
     }
 
-    if (processData.httpResponse.status === 401) {
-      this.#pendingRequests.push(processData);
+    this.#retried.add(processData);
+    this.#pendingRequests.push(processData);
 
-      if (!this.#isRefreshing) {
-        this.#isRefreshing = true;
+    if (!this.#isRefreshing) {
+      this.#isRefreshing = true;
+
+      try {
         await this.refreshAccessToken();
+      } finally {
         this.#isRefreshing = false;
       }
-
-      return;
     }
-
-    this.next(processData);
   };
 }

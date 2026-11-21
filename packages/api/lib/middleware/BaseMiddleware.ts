@@ -1,4 +1,5 @@
 import { IMiddleware, ProcessData, RequestMethods } from '..';
+import { run } from './run';
 
 /**
  * Configuration interface for checking middleware activity status.
@@ -36,9 +37,7 @@ export abstract class BaseMiddleware implements IMiddleware {
    */
   constructor(
     config:
-      | MiddlewareActivityConfig
-      | MiddlewareMethodConfig
-      | MiddlewareConfig = {}
+      MiddlewareActivityConfig | MiddlewareMethodConfig | MiddlewareConfig = {}
   ) {
     this.#config = {
       getActive: (config as MiddlewareActivityConfig).getActive,
@@ -82,13 +81,45 @@ export abstract class BaseMiddleware implements IMiddleware {
    * @param data - Processed data
    */
   public next(data: ProcessData) {
-    if (this.#nextMiddleware) {
-      this.#nextMiddleware.process(data);
+    // The path of the request it belongs to. The instance is shared by every
+    // request of the API, so what follows it is not read from the instance:
+    // another request may have been set up since
+    const { chain } = data;
+    const following = chain
+      ? chain[this.#positionIn(data) + 1]
+      : this.#nextMiddleware;
+
+    if (!following) {
+      data.resolve(data.httpResponse);
 
       return;
     }
 
-    data.resolve(data.httpResponse);
+    if (chain) data.position = chain.indexOf(following, data.position);
+
+    run(following, data);
+  }
+
+  /**
+   * Where this middleware is on the path of a request. The request knows
+   * where it is, so an instance that is on the path twice (in the request
+   * and in the response list) continues from the right place.
+   */
+  #positionIn(data: ProcessData): number {
+    const { chain, position = 0 } = data;
+
+    return chain[position] === this ? position : chain.indexOf(this);
+  }
+
+  /**
+   * Sends the request again, from the first middleware of its path: after a
+   * token was refreshed, for example.
+   * @param data - The request
+   */
+  protected restart(data: ProcessData): void {
+    data.position = 0;
+
+    run(data.chain?.[0] ?? this.#headMiddleware, data);
   }
 
   /**

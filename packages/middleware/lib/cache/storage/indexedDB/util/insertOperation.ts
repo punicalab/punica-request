@@ -1,11 +1,11 @@
-import { OBJECT_STORE } from '../constants';
+import { INDEX, OBJECT_STORE } from '../constants';
 import { Record } from '../model';
 
 /**
- * Inserts a record into the IndexedDB database.
- * @param db - The IndexedDB database instance.
- * @param record - The record to be inserted.
- * @returns A Promise that resolves to true if the record is successfully inserted, or rejects if there's an error.
+ * Stores a record for its address, in place of the one the address had.
+ * @param db - The database
+ * @param record - The record
+ * @returns Whether the record was stored
  */
 export const insertOperation = (
   db: IDBDatabase,
@@ -14,14 +14,20 @@ export const insertOperation = (
   return new Promise((resolve, reject) => {
     const txn = db.transaction(OBJECT_STORE, 'readwrite');
     const store = txn.objectStore(OBJECT_STORE);
-    const query = store.put(record);
+    // The key of the store is a number it counts itself; the address is
+    // found through the index, which takes one record per address
+    const existing = store.index(INDEX).getKey(record.url);
 
-    query.onsuccess = () => {
-      resolve(true);
+    existing.onsuccess = () => {
+      if (existing.result === undefined) {
+        store.put(record);
+      } else {
+        store.put(record, existing.result);
+      }
     };
 
-    query.onerror = () => {
-      reject();
-    };
+    txn.oncomplete = () => resolve(true);
+    txn.onerror = () => reject(txn.error);
+    txn.onabort = () => reject(txn.error);
   });
 };
