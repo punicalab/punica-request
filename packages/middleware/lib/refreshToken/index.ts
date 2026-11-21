@@ -17,6 +17,13 @@ interface TokenProvider {
  */
 interface RefreshTokenConfig {
   tokenProvider: TokenProvider;
+
+  /**
+   * Requests whose 401 is not refreshed but goes on to the next middleware.
+   * A token provider that refreshes through the same API names its own
+   * request here: answered with a 401 it would wait for itself.
+   */
+  exclude?: (processData: ProcessData) => boolean;
 }
 
 export type RefreshTokenMiddlewareConfig = RefreshTokenConfig &
@@ -100,7 +107,8 @@ export class RefreshTokenMiddleware extends BaseMiddleware {
     if (
       isHttpStatusOk(status) ||
       status !== 401 ||
-      this.#retried.has(processData)
+      this.#retried.has(processData) ||
+      this.#config.exclude?.(processData)
     ) {
       this.next(processData);
       return;

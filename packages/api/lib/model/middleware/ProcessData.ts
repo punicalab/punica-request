@@ -96,6 +96,11 @@ export type ProcessData<T = any> = {
   chain?: IMiddleware[];
 
   /**
+   * Where the request is on its path; kept by the library.
+   */
+  position?: number;
+
+  /**
    * Additional properties that can be used as needed.
    * This allows for extending the parameters with custom properties.
    */

@@ -35,9 +35,9 @@ describe('CancelRequestMiddleware', () => {
       hostname: 'https://host/',
       requestMiddlewares: [new CancelRequestMiddleware()]
     });
-    const first = api.get({ path: 'items', query: { page: '1' } });
+    const first = api.get({ path: 'items' });
     const failed = expect(first).rejects.toThrow('aborted');
-    const second = api.get({ path: 'items', query: { page: '1' } });
+    const second = api.get({ path: 'items' });
 
     await tick();
     answer(1);
@@ -49,24 +49,90 @@ describe('CancelRequestMiddleware', () => {
     expect(unhandled).not.toHaveBeenCalled();
   });
 
-  test('another page, or another method, is another request', async () => {
+  test('a new query to the same path cancels the one before it, another method does not', async () => {
     const { adapter, answer } = createSlow();
     const api = new RequestAPI(adapter, {
       hostname: 'https://host/',
       requestMiddlewares: [new CancelRequestMiddleware()]
     });
+    // What a search field sends while the user types
+    const stale = expect(
+      api.get({ path: 'search', query: { q: 'a' } })
+    ).rejects.toThrow('aborted');
+    const current = api.get({ path: 'search', query: { q: 'ab' } });
+    const saved = api.post({ path: 'search' });
+
+    await tick();
+    answer(1);
+    answer(2);
+
+    await stale;
+    expect((await current).payload).toBe(1);
+    expect((await saved).payload).toBe(2);
+  });
+
+  test('getKey says which requests are the same one', async () => {
+    const { adapter, answer } = createSlow();
+    const api = new RequestAPI(adapter, {
+      hostname: 'https://host/',
+      requestMiddlewares: [
+        new CancelRequestMiddleware({
+          getKey: ({ params }) => params.requestURL
+        })
+      ]
+    });
     const pages = [
       api.get({ path: 'items', query: { page: '1' } }),
-      api.get({ path: 'items', query: { page: '2' } }),
-      api.post({ path: 'items' })
+      api.get({ path: 'items', query: { page: '2' } })
     ];
 
     await tick();
-    [0, 1, 2].forEach(answer);
+    [0, 1].forEach(answer);
 
     expect((await Promise.all(pages)).map(({ payload }) => payload)).toEqual([
-      0, 1, 2
+      0, 1
     ]);
+  });
+
+  test('the signal the caller gave the request still cancels it', async () => {
+    const { adapter } = createSlow();
+    const api = new RequestAPI(adapter, {
+      hostname: 'https://host/',
+      requestMiddlewares: [new CancelRequestMiddleware()]
+    });
+    const own = new AbortController();
+    const request = expect(
+      api.get({ path: 'report', init: { signal: own.signal } })
+    ).rejects.toThrow('aborted');
+
+    await tick();
+    own.abort();
+    await request;
+
+    // And one that was aborted before the request was sent
+    await expect(
+      api.get({ path: 'report', init: { signal: own.signal } })
+    ).rejects.toThrow('aborted');
+    expect(adapter.calls).toHaveLength(1);
+  });
+
+  test('a request that ends without a response leaves no timer behind', async () => {
+    jest.useFakeTimers();
+
+    try {
+      const adapter = new Recorder(() => {
+        throw new TypeError('Failed to fetch');
+      });
+      const api = new RequestAPI(adapter, {
+        hostname: 'https://host/',
+        requestMiddlewares: [new CancelRequestMiddleware({ timeout: 10_000 })]
+      });
+
+      await expect(api.get({ path: 'a' })).rejects.toThrow('Failed to fetch');
+      expect(jest.getTimerCount()).toBe(0);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   test('a request that takes longer than the timeout is cancelled', async () => {

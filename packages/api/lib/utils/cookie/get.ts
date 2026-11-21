@@ -17,7 +17,10 @@ export const getCookie = (
   // Use a regular expression to search for the cookie value
   // eslint-disable-next-line no-cond-assign
   return (result = new RegExp(
-    '(?:^|; )' + encodeURIComponent(key) + '=([^;]*)'
+    // The name is matched as it is, whatever characters it holds
+    '(?:^|; )' +
+      encodeURIComponent(key).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+      '=([^;]*)'
   ).exec(cookie))
     ? decodeURIComponent(result[1]) // Decode the cookie value
     : null; // Return null if the cookie with the specified key is not found

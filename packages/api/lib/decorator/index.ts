@@ -6,6 +6,7 @@ import {
   availableMiddlewareMethods,
   Notifier
 } from '..';
+import { run } from '../middleware/run';
 
 /**
  * Decorator function that enhances a method with middleware functionality.
@@ -91,9 +92,10 @@ export const Middleware: MethodDecorator = (
         // The request carries its own path: the instances above are shared
         // with the requests that run at the same time
         processData.chain = middlewareList;
+        processData.position = 0;
 
         // Start processing with the head middleware
-        headMiddleware.process(processData);
+        run(headMiddleware, processData);
       } catch (error) {
         reject(error);
       }

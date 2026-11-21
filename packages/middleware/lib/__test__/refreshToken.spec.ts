@@ -1,4 +1,4 @@
-import { RequestAPI } from '@punica/request';
+import { IConfig, RequestAPI } from '@punica/request';
 import { ErrorMiddleware, RefreshTokenMiddleware } from '..';
 import { Recorder, settled } from './support';
 
@@ -73,6 +73,31 @@ describe('RefreshTokenMiddleware', () => {
     expect(unauthorized).toHaveBeenCalledTimes(1);
     // Not sent again: there is no new token
     expect(adapter.calls).toHaveLength(1);
+  });
+
+  test('a provider that refreshes through the same API does not wait for itself', async () => {
+    const adapter = new Recorder(() => ({ status: 401, response: null }));
+    const config: IConfig = { hostname: 'https://host/' };
+    const api = new RequestAPI(adapter, config);
+
+    config.responseMiddlewares = [
+      new RefreshTokenMiddleware({
+        // Answered with a 401 as well: the session is over
+        tokenProvider: {
+          refreshToken: async () =>
+            (await api.post({ path: 'auth/refresh' })).status === 200
+        },
+        exclude: ({ params }) => params.path === 'auth/refresh'
+      })
+    ];
+
+    const response = await settled(api.get({ path: 'a' }));
+
+    expect(response.status).toBe(401);
+    expect(adapter.calls.map(({ params }) => params.path)).toEqual([
+      'a',
+      'auth/refresh'
+    ]);
   });
 
   test('a refresh that throws rejects the requests that wait for it', async () => {

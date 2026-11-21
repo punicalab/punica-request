@@ -1,15 +1,20 @@
-import {
-  BaseMiddleware,
-  ProcessData,
-  Subscriber,
-  MiddlewareConfig
-} from '@punica/request';
+import { BaseMiddleware, ProcessData, MiddlewareConfig } from '@punica/request';
 
 /**
  * Configuration object for CancelRequestMiddleware.
  */
 interface CancelConfig {
+  /** Milliseconds after which a request is cancelled. */
   timeout?: number;
+
+  /**
+   * What makes two requests the same one, so that the later cancels the
+   * earlier. By default their method and their path: a new search cancels
+   * the one before it, whatever its query. Return the address with its query
+   * (`processData.params.requestURL`) to let requests that differ in their
+   * query run side by side.
+   */
+  getKey?: (processData: ProcessData) => string;
 }
 
 export type CancelRequestMiddlewareConfig = CancelConfig & MiddlewareConfig;
@@ -35,14 +40,15 @@ export class CancelRequestMiddleware extends BaseMiddleware {
 
   /**
    * Gives the request a signal that cancels it: when the same request is
-   * sent again, when the timeout is over or when every request is cancelled.
-   * Requests are the same when their method and their address, with its
-   * query, are.
+   * sent again, when the timeout is over, when every request is cancelled,
+   * or when the signal the caller gave the request is aborted.
    * @param processData - The request
    */
   public process = (processData: ProcessData) => {
-    const { params, notifier, reject, method } = processData;
-    const key = `${method ?? ''} ${params.requestURL}`;
+    const { config, params, method } = processData;
+    const key =
+      this.#config.getKey?.(processData) ??
+      `${method ?? ''} ${config.hostname}${params.path || ''}`;
 
     // The same request once more: the earlier one is not needed any more
     this.#controllers.get(key)?.abort();
@@ -63,34 +69,50 @@ export class CancelRequestMiddleware extends BaseMiddleware {
 
     this.#controllers.set(key, controller);
 
+    // However the request ends: answered, from a cache, or not sent at all
+    const { resolve, reject } = processData;
+
+    processData.resolve = (data) => {
+      finish();
+      resolve(data);
+    };
+    processData.reject = (reason) => {
+      finish();
+      reject(reason);
+    };
+
+    // The caller's own signal still cancels the request
+    const given = params.init?.signal;
+
+    if (given?.aborted) {
+      controller.abort();
+    } else {
+      given?.addEventListener('abort', () => controller.abort(), {
+        once: true
+      });
+    }
+
     params.init = {
       ...params.init,
       signal: controller.signal
     };
 
-    controller.signal.addEventListener('abort', () => {
-      finish();
-      reject(
+    const aborted = () =>
+      processData.reject(
         new Error(
           `Request to ${params.requestURL} was aborted due to timeout or cancellation.`
         )
       );
-    });
 
-    // Called once the response has arrived
-    const subscriber: Subscriber = {
-      key: 'cancel',
-      update: async () => finish()
-    };
+    if (controller.signal.aborted) {
+      aborted();
 
-    notifier.addSubscriber(subscriber);
-
-    try {
-      this.next(processData);
-    } catch (error) {
-      finish();
-      throw error;
+      return;
     }
+
+    controller.signal.addEventListener('abort', aborted, { once: true });
+
+    this.next(processData);
   };
 
   /**

@@ -93,6 +93,50 @@ describe('the path of a request', () => {
     );
   });
 
+  test('what is thrown after a middleware that waits rejects the request too', async () => {
+    class Broken extends BaseMiddleware {
+      public process(): void {
+        throw new Error('cannot go on');
+      }
+    }
+
+    const before = new RequestAPI(new Recorder(), {
+      hostname: 'https://host/',
+      requestMiddlewares: [new Slow(), new Broken()]
+    });
+    const after = new RequestAPI(new Recorder(), {
+      hostname: 'https://host/',
+      responseMiddlewares: [new Slow(), new Broken()]
+    });
+
+    await expect(before.get({ path: 'a' })).rejects.toThrow('cannot go on');
+    await expect(after.get({ path: 'a' })).rejects.toThrow('cannot go on');
+  });
+
+  test('a middleware listed for the request and for the response is passed twice', async () => {
+    const adapter = new Recorder();
+    const seen: string[] = [];
+
+    class Log extends BaseMiddleware {
+      public process(processData: ProcessData) {
+        seen.push(processData.httpResponse ? 'response' : 'request');
+        this.next(processData);
+      }
+    }
+
+    const log = new Log();
+    const api = new RequestAPI(adapter, {
+      hostname: 'https://host/',
+      requestMiddlewares: [log],
+      responseMiddlewares: [log]
+    });
+    const response = await api.get({ path: 'a' });
+
+    expect(response.payload).toBe('GET');
+    expect(seen).toEqual(['request', 'response']);
+    expect(adapter.calls).toEqual(['GET a']);
+  });
+
   test('a middleware can send a request again, along its own path', async () => {
     const adapter = new Recorder();
 
@@ -152,6 +196,9 @@ describe('getCookie', () => {
   test('reads a cookie from the text it is given', () => {
     expect(getCookie('token', 'a=1; token=abc%20d')).toBe('abc d');
     expect(getCookie('missing', 'a=1')).toBeNull();
+    // A name is matched as it is written
+    expect(getCookie('user.id', 'userXid=evil; user.id=42')).toBe('42');
+    expect(getCookie('a(b', 'a(b=1')).toBe('1');
   });
 
   test('finds no cookie where there is no document', () => {

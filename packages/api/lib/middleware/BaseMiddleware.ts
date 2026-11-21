@@ -1,4 +1,5 @@
 import { IMiddleware, ProcessData, RequestMethods } from '..';
+import { run } from './run';
 
 /**
  * Configuration interface for checking middleware activity status.
@@ -83,17 +84,31 @@ export abstract class BaseMiddleware implements IMiddleware {
     // The path of the request it belongs to. The instance is shared by every
     // request of the API, so what follows it is not read from the instance:
     // another request may have been set up since
-    const position = data.chain ? data.chain.indexOf(this) : -1;
-    const following =
-      position === -1 ? this.#nextMiddleware : data.chain[position + 1];
+    const { chain } = data;
+    const following = chain
+      ? chain[this.#positionIn(data) + 1]
+      : this.#nextMiddleware;
 
-    if (following) {
-      following.process(data);
+    if (!following) {
+      data.resolve(data.httpResponse);
 
       return;
     }
 
-    data.resolve(data.httpResponse);
+    if (chain) data.position = chain.indexOf(following, data.position);
+
+    run(following, data);
+  }
+
+  /**
+   * Where this middleware is on the path of a request. The request knows
+   * where it is, so an instance that is on the path twice (in the request
+   * and in the response list) continues from the right place.
+   */
+  #positionIn(data: ProcessData): number {
+    const { chain, position = 0 } = data;
+
+    return chain[position] === this ? position : chain.indexOf(this);
   }
 
   /**
@@ -102,7 +117,9 @@ export abstract class BaseMiddleware implements IMiddleware {
    * @param data - The request
    */
   protected restart(data: ProcessData): void {
-    (data.chain?.[0] ?? this.#headMiddleware).process(data);
+    data.position = 0;
+
+    run(data.chain?.[0] ?? this.#headMiddleware, data);
   }
 
   /**

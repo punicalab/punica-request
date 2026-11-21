@@ -97,14 +97,14 @@ const config: IConfig = {
 };
 ```
 
-| Middleware                | List     | What it does                                                                                  |
-| ------------------------- | -------- | --------------------------------------------------------------------------------------------- |
-| `TokenAuthMiddleware`     | request  | Puts a token from a cookie into a header (`Bearer ${token}` by default)                       |
-| `CookieMiddleware`        | request  | Copies the value of a cookie into a header                                                    |
-| `CancelRequestMiddleware` | request  | Cancels a request when the same one is sent again or a timeout is over; `cancelAllRequests()` |
-| `CacheMiddleware`         | request  | Answers a `GET` that has `cache: {}` from a storage (`StorageSession`, `StorageIndexedDB`)    |
-| `RefreshTokenMiddleware`  | response | On a 401, refreshes the token once and sends the request again, once                          |
-| `ErrorMiddleware`         | response | Rejects a response that is not 2xx, after calling the handler of its status                   |
+| Middleware                | List     | What it does                                                                                                                                                  |
+| ------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TokenAuthMiddleware`     | request  | Puts a token from a cookie into a header (`Bearer ${token}` by default)                                                                                       |
+| `CookieMiddleware`        | request  | Copies the value of a cookie into a header                                                                                                                    |
+| `CancelRequestMiddleware` | request  | Cancels a request when one with the same method and path is sent again, or a timeout is over; `getKey` changes what counts as the same; `cancelAllRequests()` |
+| `CacheMiddleware`         | request  | Answers a `GET` that has `cache: {}` from a storage (`StorageSession`, `StorageIndexedDB`)                                                                    |
+| `RefreshTokenMiddleware`  | response | On a 401, refreshes the token once and sends the request again, once                                                                                          |
+| `ErrorMiddleware`         | response | Rejects a response that is not 2xx, after calling the handler of its status                                                                                   |
 
 Every middleware takes `getActive` and `getAvailableMethods` to switch it off
 or limit it to some methods.
