@@ -37,9 +37,10 @@ the adapter: `credentials`, `mode`, `redirect`, …), `middlewares`.
 
 - `baseURL` and the path are joined whatever slashes they have:
   `'https://x/v1'` + `'items'` or `'/items'` → `https://x/v1/items`.
-- With a `baseURL`, a path that leads to another origin
-  (`'https://other.example/…'`) is refused. Use a second client for
-  another server.
+- With a `baseURL`, a path that leads away from it is refused: another
+  origin (`'https://other.example/…'`) or out of its path (`'../admin'`).
+  Use a second client for another server. A colon is fine:
+  `'items:batch'` is a path.
 - A relative `baseURL` (`'/api'`) works in a page only; on a server give
   the whole address.
 
