@@ -12,6 +12,7 @@ Documentation: [request.punicalab.com](https://request.punicalab.com)
 | [`@punica/request-fetch`](https://www.npmjs.com/package/@punica/request-fetch)           | `APIFetch`, the adapter for `fetch`                               |
 | [`@punica/request-http`](https://www.npmjs.com/package/@punica/request-http)             | `APIHttp`, an adapter for Node's `http`                           |
 | [`@punica/request-middleware`](https://www.npmjs.com/package/@punica/request-middleware) | Token, cookie, error, refresh-token, cancel and cache middlewares |
+| [`@punica/request-mcp`](https://www.npmjs.com/package/@punica/request-mcp)               | An MCP server that gives an AI assistant the real API             |
 
 ```bash
 npm install @punica/request @punica/request-fetch @punica/request-middleware
@@ -129,6 +130,18 @@ class TraceMiddleware extends BaseMiddleware {
 
 A middleware ends a request by calling `processData.resolve(response)` or
 `processData.reject(error)` instead of `next`.
+
+## AI assistants
+
+A model that has not seen the library guesses its API. `@punica/request-mcp`
+gives an assistant the API of the version you have installed and a checker
+for the code it writes:
+
+```bash
+claude mcp add punica-request -- npx -y @punica/request-mcp
+```
+
+See [its README](./packages/mcp/README.md) for other clients and the tools.
 
 ## Development
 

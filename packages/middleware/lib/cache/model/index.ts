@@ -3,7 +3,7 @@ import { ContentType } from '@punica/request';
 /**
  * Interface representing a storage system.
  */
-interface IStorage {
+export interface IStorage {
   /**
    * Reads data from the storage based on the provided request URL.
    * @param requestURL - The URL used as a key to retrieve data.
@@ -25,5 +25,3 @@ interface IStorage {
     expireTime?: number
   ) => Promise<any>;
 }
-
-export { IStorage };
