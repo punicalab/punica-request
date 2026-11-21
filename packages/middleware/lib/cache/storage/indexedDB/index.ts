@@ -14,6 +14,7 @@ export class StorageIndexedDB implements IStorage {
    * @returns A Promise that resolves to the stored data or null if not found.
    */
   public read = (requestURL: string): Promise<any> => {
+    // eslint-disable-next-line no-async-promise-executor
     return new Promise(async (resolve) => {
       const db = await OperationDatabase.getDatabase();
       const record = await getOperation(db, requestURL);

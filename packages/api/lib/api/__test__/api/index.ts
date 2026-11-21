@@ -7,6 +7,8 @@ import {
 } from '../../..';
 
 export class RequestSample implements IRequest {
+  // An adapter keeps the configuration it is given; this one needs none of it
+  // eslint-disable-next-line no-unused-private-class-members
   #config: IConfig;
 
   /**

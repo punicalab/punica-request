@@ -81,7 +81,7 @@ export class CancelRequestMiddleware extends BaseMiddleware {
       const subscriber: Subscriber = {
         key: 'cancel',
         update: async () => {
-          return new Promise(async (resolve, reject) => {
+          return new Promise((resolve) => {
             // After processing, remove the controller
             this.#controllers.delete(URL);
             resolve();

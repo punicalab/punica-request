@@ -41,7 +41,7 @@ export class CookieMiddleware extends BaseMiddleware {
     const cookieValue = getCookie(cookieName);
 
     // If a valid cookie value is found, add it to the request headers.
-    if (Boolean(cookieValue)) {
+    if (cookieValue) {
       params.init.headers = {
         ...params.init.headers,
         [headerName]: cookieValue

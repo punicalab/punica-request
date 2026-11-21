@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    // The same sources Jest loads (moduleNameMapper), not the built packages
+    "paths": {
+      "@punica/request": ["packages/api/lib"],
+      "@punica/request-fetch": ["packages/api-fetch/lib"],
+      "@punica/request-http": ["packages/api-http/lib"],
+      "@punica/request-middleware": ["packages/middleware/lib"]
+    }
+  }
+}
