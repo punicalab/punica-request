@@ -49,6 +49,9 @@ export class APIHttp implements IRequest {
     return new Promise((resolve, reject) => {
       let data = '';
 
+      // Decoded as one text: a character may arrive in two pieces
+      res.setEncoding('utf8');
+
       res.on('data', (chunk) => {
         data += chunk;
       });
