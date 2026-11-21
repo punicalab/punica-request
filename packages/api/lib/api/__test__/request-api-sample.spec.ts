@@ -14,11 +14,9 @@ describe('api sample', () => {
   const sampleBMiddleware = new SampleBMiddleware();
   const sampleCMiddleware = new SampleCMiddleware();
   const config: IConfig = {
-    request: { hostname: 'http://host:port/api/' },
-    middleware: {
-      request: [sampleBMiddleware, sampleAMiddleware],
-      response: [sampleCMiddleware]
-    }
+    hostname: 'http://host:port/api/',
+    requestMiddlewares: [sampleBMiddleware, sampleAMiddleware],
+    responseMiddlewares: [sampleCMiddleware]
   };
 
   beforeAll(() => {
@@ -28,17 +26,25 @@ describe('api sample', () => {
 
   test('get', async () => {
     return request
-      .get({ path: 'url', query: { data: 5 }, contentType: 'json' })
+      .get({
+        path: 'url',
+        query: { data: '5' },
+        contentType: 'json'
+      })
       .then((d) => {
-        expect(d).toEqual({ data: 5 });
+        expect(d.payload).toEqual({ data: '5' });
       });
   });
 
   test('delete', async () => {
     return request
-      .delete({ path: 'url', query: { data: 5 }, contentType: 'json' })
+      .delete({
+        path: 'url',
+        query: { data: '5' },
+        contentType: 'json'
+      })
       .then((d) => {
-        expect(d).toEqual({ data: 5 });
+        expect(d.payload).toEqual({ data: '5' });
       });
   });
 
@@ -46,7 +52,7 @@ describe('api sample', () => {
     return request
       .post({ path: 'url', data: { data: 5 }, contentType: 'json' })
       .then((d) => {
-        expect(d).toEqual({ data: 5 });
+        expect(d.payload).toEqual({ data: 5 });
       });
   });
 
@@ -54,7 +60,19 @@ describe('api sample', () => {
     return request
       .put({ path: 'url', data: { data: 5 }, contentType: 'json' })
       .then((d) => {
-        expect(d).toEqual({ data: 5 });
+        expect(d.payload).toEqual({ data: 5 });
+      });
+  });
+
+  test('patch', async () => {
+    return request
+      .patch({
+        path: 'url',
+        data: [{ op: 'add', path: '' }],
+        contentType: 'json'
+      })
+      .then((d) => {
+        expect(d.payload).toEqual([{ op: 'add', path: '' }]);
       });
   });
 

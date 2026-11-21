@@ -1,2 +1,3 @@
-export { default as ProcessData } from './ProcessData';
-export { default as IMiddleware } from './IMiddleware';
+export * from './HttpResponse';
+export * from './ProcessData';
+export * from './IMiddleware';

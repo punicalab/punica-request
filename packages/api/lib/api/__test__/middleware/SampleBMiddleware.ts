@@ -1,6 +1,6 @@
 import { BaseMiddleware, ProcessData } from '../../..';
 
-class SampleBMiddleware extends BaseMiddleware {
+export class SampleBMiddleware extends BaseMiddleware {
   /**
    *
    */
@@ -15,5 +15,3 @@ class SampleBMiddleware extends BaseMiddleware {
     this.next(data);
   };
 }
-
-export default SampleBMiddleware;

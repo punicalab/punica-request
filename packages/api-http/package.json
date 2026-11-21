@@ -1,0 +1,38 @@
+{
+  "name": "@punica/request-http",
+  "version": "1.2.5",
+  "description": "Request Node http",
+  "author": {
+    "name": "Uryan Sezgin TEKE",
+    "email": "uryan.sezgin.teke@gmail.com",
+    "url": "https://github.com/punicalab"
+  },
+  "keywords": [
+    "http",
+    "promise"
+  ],
+  "private": false,
+  "license": "ISC",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "url": "git@github.com:punicalab/punica-request.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@punica/request": "^2.6.5"
+  },
+  "scripts": {
+    "build": "scripty",
+    "clean": "scripty",
+    "compile": "scripty"
+  },
+  "scripty": {
+    "path": "../../scripts/packages"
+  }
+}

@@ -1,7 +1,13 @@
-import { RequestParams, IConfig, IRequest } from '../../..';
+import {
+  RequestParams,
+  IConfig,
+  IRequest,
+  IPatch,
+  HttpResponse
+} from '../../..';
 
 export class RequestSample implements IRequest {
-  private _config: IConfig;
+  #config: IConfig;
 
   /**
    *
@@ -12,7 +18,7 @@ export class RequestSample implements IRequest {
    *
    */
   public set config(value: IConfig) {
-    this._config = value;
+    this.#config = value;
   }
 
   /**
@@ -20,27 +26,22 @@ export class RequestSample implements IRequest {
    * @param params
    * @returns
    */
-  public async get<T = any, R = any>(params: RequestParams<T>): Promise<R> {
-    return new Promise<R>((resolve, reject) => {
+  public async get<T = any, R = any>(
+    params: RequestParams<T>
+  ): Promise<HttpResponse<R>> {
+    return new Promise<HttpResponse<R>>((resolve, reject) => {
       if (params) {
         const res: any = params.query;
-
-        resolve({
+        const httpResponse: HttpResponse = {
+          response: res,
           status: 200,
-          headers: {
-            get() {
-              return 'application/json; charset=utf-8';
-            }
-          },
-          ok: true,
-          json: () =>
-            new Promise((resolve) => {
-              resolve(res);
-            })
-        } as any);
-      }
+          payload: res
+        };
 
-      reject(new Error('error'));
+        resolve(httpResponse);
+      } else {
+        reject(new Error('params object is required'));
+      }
     });
   }
 
@@ -49,27 +50,22 @@ export class RequestSample implements IRequest {
    * @param params
    * @returns
    */
-  public async delete<T = any, R = any>(params: RequestParams<T>): Promise<R> {
-    return new Promise<R>((resolve, reject) => {
+  public async delete<T = any, R = any>(
+    params: RequestParams<T>
+  ): Promise<HttpResponse<R>> {
+    return new Promise<HttpResponse<R>>((resolve, reject) => {
       if (params) {
         const res: any = params.query;
-
-        resolve({
+        const httpResponse: HttpResponse = {
+          response: res,
           status: 200,
-          headers: {
-            get() {
-              return 'application/json; charset=utf-8';
-            }
-          },
-          ok: true,
-          json: () =>
-            new Promise((resolve) => {
-              resolve(res);
-            })
-        } as any);
-      }
+          payload: res
+        };
 
-      reject(new Error('error'));
+        resolve(httpResponse);
+      } else {
+        reject(new Error('params object is required'));
+      }
     });
   }
 
@@ -78,27 +74,22 @@ export class RequestSample implements IRequest {
    * @param params
    * @returns
    */
-  public async post<T = any, R = any>(params: RequestParams<T>): Promise<R> {
-    return new Promise<R>((resolve, reject) => {
-      if (params.init) {
-        const res: any = params.data;
-
-        resolve({
+  public async post<T = any, R = any>(
+    params: RequestParams<T>
+  ): Promise<HttpResponse<R>> {
+    return new Promise<HttpResponse<R>>((resolve, reject) => {
+      if (params) {
+        const data: any = params.data;
+        const httpResponse: HttpResponse = {
+          response: data,
           status: 200,
-          headers: {
-            get() {
-              return 'application/json; charset=utf-8';
-            }
-          },
-          ok: true,
-          json: () =>
-            new Promise((resolve) => {
-              resolve(res);
-            })
-        } as any);
-      }
+          payload: data
+        };
 
-      reject(new Error('error'));
+        resolve(httpResponse);
+      } else {
+        reject(new Error('params object is required'));
+      }
     });
   }
 
@@ -107,39 +98,46 @@ export class RequestSample implements IRequest {
    * @param params
    * @returns
    */
-  public async put<T = any, R = any>(params: RequestParams<T>): Promise<R> {
-    return new Promise<R>((resolve, reject) => {
-      if (params.init) {
-        const res: any = params.data;
-
-        resolve({
+  public async put<T = any, R = any>(
+    params: RequestParams<T>
+  ): Promise<HttpResponse<R>> {
+    return new Promise<HttpResponse<R>>((resolve, reject) => {
+      if (params) {
+        const data: any = params.data;
+        const httpResponse: HttpResponse = {
+          response: data,
           status: 200,
-          headers: {
-            get() {
-              return 'application/json; charset=utf-8';
-            }
-          },
-          ok: true,
-          json: () => {
-            return new Promise((resolve) => {
-              resolve(res);
-            });
-          }
-        } as any);
-      }
+          payload: data
+        };
 
-      reject(new Error('error'));
+        resolve(httpResponse);
+      } else {
+        reject(new Error('params object is required'));
+      }
     });
   }
 
   /**
    *
-   * @param response
+   * @param params
    * @returns
    */
-  public readResponse(response: Response): Promise<unknown> {
-    return new Promise((resolve) => {
-      resolve(response['json']());
+  public async patch<T = Array<IPatch>, R = any>(
+    params: RequestParams<T>
+  ): Promise<HttpResponse<R>> {
+    return new Promise<HttpResponse<R>>((resolve, reject) => {
+      if (params) {
+        const data: any = params.data;
+        const httpResponse: HttpResponse = {
+          response: data,
+          status: 200,
+          payload: data
+        };
+
+        resolve(httpResponse);
+      } else {
+        reject(new Error('params object is required'));
+      }
     });
   }
 }
