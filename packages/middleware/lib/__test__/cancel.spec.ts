@@ -1,5 +1,5 @@
 import { HttpResponse, RequestAPI } from '@punica/request';
-import { CancelRequestMiddleware } from '..';
+import { CancelRequestMiddleware, RefreshTokenMiddleware } from '..';
 import { Recorder } from './support';
 
 /** Answers when the test says so, and fails when its request is aborted. */
@@ -114,6 +114,63 @@ describe('CancelRequestMiddleware', () => {
       api.get({ path: 'report', init: { signal: own.signal } })
     ).rejects.toThrow('aborted');
     expect(adapter.calls).toHaveLength(1);
+  });
+
+  test('a request that is sent again after a token refresh is not cancelled by itself', async () => {
+    let valid = false;
+    const adapter = new Recorder(() =>
+      valid
+        ? { status: 200, response: null, payload: 'ok' }
+        : { status: 401, response: null }
+    );
+    const api = new RequestAPI(adapter, {
+      hostname: 'https://host/',
+      requestMiddlewares: [new CancelRequestMiddleware({ timeout: 10_000 })],
+      responseMiddlewares: [
+        new RefreshTokenMiddleware({
+          tokenProvider: { refreshToken: async () => (valid = true) }
+        })
+      ]
+    });
+    const response = await api.get({ path: 'a' });
+
+    expect(response.payload).toBe('ok');
+    expect(adapter.calls).toHaveLength(2);
+  });
+
+  test('a request whose caller cancelled it before it was sent cancels nothing else', async () => {
+    const { adapter, answer } = createSlow();
+    const api = new RequestAPI(adapter, {
+      hostname: 'https://host/',
+      requestMiddlewares: [new CancelRequestMiddleware()]
+    });
+    const running = api.get({ path: 'items' });
+    const gone = new AbortController();
+
+    gone.abort();
+    await tick();
+    await expect(
+      api.get({ path: 'items', init: { signal: gone.signal } })
+    ).rejects.toThrow('aborted');
+
+    answer(0);
+    expect((await running).payload).toBe(0);
+  });
+
+  test('a signal shared by many requests keeps nothing of the ones that ended', async () => {
+    const api = new RequestAPI(new Recorder(), {
+      hostname: 'https://host/',
+      requestMiddlewares: [new CancelRequestMiddleware()]
+    });
+    const shared = new AbortController();
+    const added = jest.spyOn(shared.signal, 'addEventListener');
+    const removed = jest.spyOn(shared.signal, 'removeEventListener');
+
+    await api.get({ path: 'a', init: { signal: shared.signal } });
+    await api.get({ path: 'b', init: { signal: shared.signal } });
+
+    expect(added).toHaveBeenCalledTimes(2);
+    expect(removed).toHaveBeenCalledTimes(2);
   });
 
   test('a request that ends without a response leaves no timer behind', async () => {

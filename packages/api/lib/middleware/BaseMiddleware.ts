@@ -84,10 +84,12 @@ export abstract class BaseMiddleware implements IMiddleware {
     // The path of the request it belongs to. The instance is shared by every
     // request of the API, so what follows it is not read from the instance:
     // another request may have been set up since
-    const { chain } = data;
-    const following = chain
-      ? chain[this.#positionIn(data) + 1]
-      : this.#nextMiddleware;
+    const index = data.chain ? this.#positionIn(data) : -1;
+
+    // Not on the path: a middleware another one hands the request to. It
+    // goes where it was told to, as before there was a path
+    const following =
+      index === -1 ? this.#nextMiddleware : data.chain[index + 1];
 
     if (!following) {
       data.resolve(data.httpResponse);
@@ -95,15 +97,15 @@ export abstract class BaseMiddleware implements IMiddleware {
       return;
     }
 
-    if (chain) data.position = chain.indexOf(following, data.position);
+    if (index !== -1) data.position = index + 1;
 
     run(following, data);
   }
 
   /**
-   * Where this middleware is on the path of a request. The request knows
-   * where it is, so an instance that is on the path twice (in the request
-   * and in the response list) continues from the right place.
+   * Where this middleware is on the path of a request, or -1. The request
+   * knows where it is, so an instance that is on the path twice continues
+   * from the right place.
    */
   #positionIn(data: ProcessData): number {
     const { chain, position = 0 } = data;

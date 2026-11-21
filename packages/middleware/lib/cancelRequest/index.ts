@@ -26,6 +26,11 @@ export type CancelRequestMiddlewareConfig = CancelConfig & MiddlewareConfig;
 export class CancelRequestMiddleware extends BaseMiddleware {
   #config: CancelRequestMiddlewareConfig;
   #controllers: Map<string, AbortController>;
+  /** What the middleware holds for a request, across its attempts. */
+  #requests = new WeakMap<
+    ProcessData,
+    { given?: AbortSignal | null; release: () => void }
+  >();
 
   /**
    * Constructs an instance of CancelRequestMiddleware with the provided configuration.
@@ -46,6 +51,46 @@ export class CancelRequestMiddleware extends BaseMiddleware {
    */
   public process = (processData: ProcessData) => {
     const { config, params, method } = processData;
+    let request = this.#requests.get(processData);
+
+    if (request) {
+      // Sent again, after a token was refreshed for example: the attempt
+      // before is over, which is not a cancellation
+      request.release();
+    } else {
+      const { resolve, reject } = processData;
+
+      request = { given: params.init?.signal, release: () => undefined };
+      this.#requests.set(processData, request);
+
+      // However the request ends: answered, from a cache, or not sent at all
+      const state = request;
+
+      processData.resolve = (data) => {
+        state.release();
+        resolve(data);
+      };
+      processData.reject = (reason) => {
+        state.release();
+        reject(reason);
+      };
+    }
+
+    const { given } = request;
+    const aborted = () =>
+      processData.reject(
+        new Error(
+          `Request to ${params.requestURL} was aborted due to timeout or cancellation.`
+        )
+      );
+
+    // Cancelled by its caller before it was sent: nothing else is touched
+    if (given?.aborted) {
+      aborted();
+
+      return;
+    }
+
     const key =
       this.#config.getKey?.(processData) ??
       `${method ?? ''} ${config.hostname}${params.path || ''}`;
@@ -57,60 +102,28 @@ export class CancelRequestMiddleware extends BaseMiddleware {
     const timer = this.#config.timeout
       ? setTimeout(() => controller.abort(), this.#config.timeout)
       : undefined;
+    const cancel = () => controller.abort();
 
-    /** The request is over: its timer and its entry go, a later one's stay. */
-    const finish = () => {
+    this.#controllers.set(key, controller);
+    controller.signal.addEventListener('abort', aborted, { once: true });
+    // The caller's own signal still cancels the request
+    given?.addEventListener('abort', cancel, { once: true });
+
+    /** This attempt is over: its timer, listeners and entry go. */
+    request.release = () => {
       clearTimeout(timer);
+      controller.signal.removeEventListener('abort', aborted);
+      given?.removeEventListener('abort', cancel);
 
       if (this.#controllers.get(key) === controller) {
         this.#controllers.delete(key);
       }
     };
 
-    this.#controllers.set(key, controller);
-
-    // However the request ends: answered, from a cache, or not sent at all
-    const { resolve, reject } = processData;
-
-    processData.resolve = (data) => {
-      finish();
-      resolve(data);
-    };
-    processData.reject = (reason) => {
-      finish();
-      reject(reason);
-    };
-
-    // The caller's own signal still cancels the request
-    const given = params.init?.signal;
-
-    if (given?.aborted) {
-      controller.abort();
-    } else {
-      given?.addEventListener('abort', () => controller.abort(), {
-        once: true
-      });
-    }
-
     params.init = {
       ...params.init,
       signal: controller.signal
     };
-
-    const aborted = () =>
-      processData.reject(
-        new Error(
-          `Request to ${params.requestURL} was aborted due to timeout or cancellation.`
-        )
-      );
-
-    if (controller.signal.aborted) {
-      aborted();
-
-      return;
-    }
-
-    controller.signal.addEventListener('abort', aborted, { once: true });
 
     this.next(processData);
   };
