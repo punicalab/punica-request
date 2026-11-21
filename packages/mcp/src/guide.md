@@ -86,9 +86,9 @@ only in the list it is made for:
 |---|---|---|---|
 | `TokenAuthMiddleware` | request | `cookieName`, `headerName`, `tokenFormat?` (`"Bearer ${token}"`) | Puts the token of a cookie into a header |
 | `CookieMiddleware` | request | `cookieName`, `headerName` | Copies a cookie into a header |
-| `CancelRequestMiddleware` | request | `timeout?` (ms) | Cancels a request when the same one (method, address, query) is sent again or the timeout is over; `cancelAllRequests()` |
+| `CancelRequestMiddleware` | request | `timeout?` (ms), `getKey?` | Cancels a request when one with the same method and path is sent again or the timeout is over; `cancelAllRequests()` |
 | `CacheMiddleware` | request | `storage` | Answers a `GET` whose params have `cache` from the storage, and stores its response |
-| `RefreshTokenMiddleware` | response | `tokenProvider: { refreshToken(): Promise<boolean> }` | On a 401, refreshes the token once and sends the request again, once |
+| `RefreshTokenMiddleware` | response | `tokenProvider: { refreshToken(): Promise<boolean> }`, `exclude?` | On a 401, refreshes the token once and sends the request again, once |
 | `ErrorMiddleware` | response | `contentType`, `error: { [status]: async (processData) => … }` | Calls the handler of the status, then rejects |
 
 ```ts
@@ -127,6 +127,16 @@ const config: IConfig = {
   401 is rejected before it can be refreshed. When `refreshToken()` resolves
   `false` the request is not sent again and its 401 goes on to the next
   middleware.
+- `CancelRequestMiddleware` treats requests with the same method and path as
+  one: a new search cancels the one before it, whatever its query, and two
+  `POST`s to one path cancel each other too. To let requests that differ in
+  their query run side by side:
+  `getKey: ({ params }) => params.requestURL`; to keep it away from writes:
+  `getAvailableMethods: () => ["GET"]`. A signal given in `init.signal` still
+  cancels the request.
+- A `tokenProvider` that refreshes through the same `RequestAPI` must name its
+  own request: `exclude: ({ params }) => params.path === "auth/refresh"`.
+  Otherwise a 401 for the refresh waits for itself.
 - A status without a handler in `ErrorMiddleware` is rejected too; a message
   in the console asks for the handler.
 - Caching is asked for per request: `api.get({ path, contentType: "json", cache: {} })`,
