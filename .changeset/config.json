@@ -8,7 +8,12 @@
   ],
   "commit": false,
   "fixed": [
-    ["@punica/request", "@punica/request-fetch", "@punica/request-middleware"]
+    [
+      "@punica/request",
+      "@punica/request-fetch",
+      "@punica/request-http",
+      "@punica/request-middleware"
+    ]
   ],
   "linked": [],
   "access": "public",

@@ -1,22 +1,14 @@
 {
   "compilerOptions": {
-    "lib": ["es2020", "DOM", "DOM.Iterable"],
+    "lib": ["es2018", "DOM", "DOM.Iterable"],
     "module": "commonjs",
     "target": "es2018",
     "moduleResolution": "node",
-    // The library's own @Middleware is a legacy decorator; it is compiled
-    // into the build, so applications need no decorator setting
-    "experimentalDecorators": true,
     "declaration": true,
     "sourceMap": false,
     "declarationMap": false,
     "removeComments": false,
     "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": false,
-    "strictFunctionTypes": true,
-    "noImplicitThis": true,
-    "alwaysStrict": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,

@@ -29,6 +29,9 @@
     "./package.json": "./package.json"
   },
   "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
   "publishConfig": {
     "access": "public",
     "provenance": true

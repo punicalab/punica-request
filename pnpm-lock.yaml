@@ -227,13 +227,13 @@ importers:
   packages/api: {}
 
   packages/api-fetch:
-    dependencies:
+    devDependencies:
       '@punica/request':
         specifier: workspace:^
         version: link:../api
 
   packages/api-http:
-    dependencies:
+    devDependencies:
       '@punica/request':
         specifier: workspace:^
         version: link:../api
@@ -261,7 +261,7 @@ importers:
         version: link:../middleware
 
   packages/middleware:
-    dependencies:
+    devDependencies:
       '@punica/request':
         specifier: workspace:^
         version: link:../api
