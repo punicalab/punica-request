@@ -37,10 +37,8 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Build
-        run: pnpm build
-
-      - name: Typecheck
+      # Builds first: the packages are checked against each other's builds
+      - name: Build and Typecheck
         run: pnpm typecheck
 
       - name: Test

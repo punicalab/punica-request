@@ -50,6 +50,9 @@ jobs:
 
       # Opens the "Version Packages" pull request while changesets are pending,
       # publishes to npm once that pull request is merged
+      # GitHub starts no workflow for a pull request its own token opens, so
+      # that pull request shows no checks; this job lints, builds and tests
+      # again before it publishes
       - name: Version or Publish
         uses: changesets/action@v2
         with:

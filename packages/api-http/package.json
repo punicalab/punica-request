@@ -41,7 +41,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup lib/index.ts --format esm,cjs --target node20 --clean && tsc -p tsconfig.build.json --emitDeclarationOnly",
+    "build": "tsup lib/index.ts --format esm,cjs --target node18 --clean && tsc -p tsconfig.build.json --emitDeclarationOnly",
     "clean": "rimraf dist",
     "lint": "eslint lib"
   },

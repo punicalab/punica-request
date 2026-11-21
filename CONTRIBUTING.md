@@ -6,8 +6,8 @@ series
 
 ## Project setup
 
-The repository is a [pnpm](https://pnpm.io) workspace and needs Node 22 or
-later.
+The repository is a [pnpm](https://pnpm.io) workspace and needs Node 22.18
+or later.
 
 1.  `Fork` and `Clone` the repo
 2.  Run `pnpm install` to install dependencies
@@ -17,7 +17,7 @@ later.
 | ---------------- | ----------------------------------------------------- |
 | `pnpm build`     | Builds every package, as ES modules and as CommonJS   |
 | `pnpm test`      | The unit tests, then the tests against the builds     |
-| `pnpm typecheck` | Type-checks every package                             |
+| `pnpm typecheck` | Builds, then type-checks every package                |
 | `pnpm lint`      | ESLint                                                |
 | `pnpm changeset` | Describes a change for the changelog and the versions |
 

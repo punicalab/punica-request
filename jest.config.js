@@ -3,7 +3,7 @@ module.exports = {
   transform: {
     '^.+\\.ts$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.jest.json' }]
   },
-  testRegex: '/__test__/.*\\.(test|spec)\\.ts$',
+  testRegex: '(/__tests?__/.*|\\.)(test|spec)\\.ts$',
   moduleFileExtensions: ['ts', 'js', 'json', 'node'],
   // Tests run against the sources of the packages, not their builds
   moduleNameMapper: {
