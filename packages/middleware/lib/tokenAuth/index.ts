@@ -45,7 +45,7 @@ export class TokenAuthMiddleware extends BaseMiddleware {
     const cookieValue = getCookie(cookieName);
 
     // If a valid cookie value is found, add the authorization header to the request.
-    if (Boolean(cookieValue)) {
+    if (cookieValue) {
       params.init.headers = {
         ...params.init.headers,
         [headerName]: tokenFormat.replace('${token}', cookieValue)

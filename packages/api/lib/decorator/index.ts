@@ -14,7 +14,7 @@ import {
  * @param descriptor - The method descriptor.
  */
 export const Middleware: MethodDecorator = (
-  target: Object,
+  target: object,
   propertyKey: string | symbol,
   descriptor: any
 ) => {
@@ -41,7 +41,7 @@ export const Middleware: MethodDecorator = (
         );
 
         let requestURL = `${config.hostname}${params.path || ''}`;
-        let queryParams = new URLSearchParams(params.query || {});
+        const queryParams = new URLSearchParams(params.query || {});
 
         // Construct the request URL with query parameters
         if (queryParams.toString()) {

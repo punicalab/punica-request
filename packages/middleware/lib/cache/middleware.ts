@@ -73,6 +73,7 @@ export class CacheMiddleware extends BaseMiddleware {
             const { httpResponse } = _processData;
             const { status, payload } = httpResponse;
 
+            // eslint-disable-next-line no-async-promise-executor
             return new Promise(async (resolve) => {
               if (isHttpStatusOk(status)) {
                 // Store response data in the cache
@@ -93,7 +94,7 @@ export class CacheMiddleware extends BaseMiddleware {
 
         this.next(processData); // Continue processing the request
       }
-    } catch (error) {
+    } catch {
       this.next(processData); // Proceed to the next middleware in case of errors
     }
   };

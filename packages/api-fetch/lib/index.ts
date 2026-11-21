@@ -40,7 +40,7 @@ export class APIFetch implements IRequest {
           .then((d: any) => {
             resolve(d);
           })
-          .catch((e) => {
+          .catch(() => {
             resolve(null);
           });
       } else {

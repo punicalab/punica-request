@@ -6,10 +6,20 @@ series
 
 ## Project setup
 
+The repository is a [pnpm](https://pnpm.io) workspace and needs Node 22 or
+later.
+
 1.  `Fork` and `Clone` the repo
-2.  Run `yarn install` to install dependencies
-3.  Create a branch for your pull request (see
-    [PULL_REQUEST_TEMPLATE](https://github.com/punicalab/punica-request/blob/HEAD/.github/PULL_REQUEST_TEMPLATE.md))
+2.  Run `pnpm install` to install dependencies
+3.  Create a branch from `develop` for your pull request
+
+| Command          |                                                       |
+| ---------------- | ----------------------------------------------------- |
+| `pnpm build`     | Builds every package, as ES modules and as CommonJS   |
+| `pnpm test`      | The unit tests, then the tests against the builds     |
+| `pnpm typecheck` | Type-checks every package                             |
+| `pnpm lint`      | ESLint                                                |
+| `pnpm changeset` | Describes a change for the changelog and the versions |
 
 > Tip: Keep your `main` branch pointing at the original repository and make pull
 > requests from branches on your fork. To do this, run:
@@ -28,8 +38,20 @@ series
 
 ## Committing and Pushing changes
 
-Please make sure to run the tests before you commit your changes. You can run
-`yarn test`
+Run `pnpm lint && pnpm build && pnpm test` before you commit. The first line
+of a commit message is `type: subject` (`feat`, `fix`, `docs`, `chore`, …)
+and at most 88 characters; a hook checks it.
+
+A change that reaches users needs a changeset: run `pnpm changeset`, pick the
+packages and whether it is a patch, a minor or a major change, and commit the
+file it writes. `@punica/request`, `@punica/request-fetch` and
+`@punica/request-middleware` share one version.
+
+## Releases
+
+Pull requests go to `develop`. When `develop` is merged into `main`, the
+release workflow opens a "version packages" pull request from the pending
+changesets; merging that one publishes to npm.
 
 ## Help needed
 

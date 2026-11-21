@@ -2,11 +2,6 @@
   "name": "@punica/request-middleware",
   "version": "2.6.5",
   "description": "Request Middleware",
-  "author": {
-    "name": "Uryan Sezgin TEKE",
-    "email": "uryan.sezgin.teke@gmail.com",
-    "url": "https://github.com/punicalab"
-  },
   "keywords": [
     "http",
     "promise",
@@ -15,28 +10,43 @@
     "fetch",
     "middleware"
   ],
-  "private": false,
+  "homepage": "https://request.punicalab.com",
   "license": "ISC",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "author": {
+    "name": "Uryan Sezgin TEKE",
+    "email": "uryan.sezgin.teke@gmail.com",
+    "url": "https://github.com/punicalab"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   },
   "repository": {
-    "url": "git@github.com:punicalab/punica-request.git"
+    "type": "git",
+    "url": "git+https://github.com/punicalab/punica-request.git",
+    "directory": "packages/middleware"
   },
   "files": [
     "dist"
   ],
-  "dependencies": {
-    "@punica/request": "^2.6.5"
-  },
   "scripts": {
-    "build": "scripty",
-    "clean": "scripty",
-    "compile": "scripty"
+    "build": "tsup lib/index.ts --format esm,cjs --target es2020 --clean && tsc -p tsconfig.build.json --emitDeclarationOnly",
+    "clean": "rimraf dist",
+    "lint": "eslint lib"
   },
-  "scripty": {
-    "path": "../../scripts/packages"
+  "dependencies": {
+    "@punica/request": "workspace:^"
   }
 }

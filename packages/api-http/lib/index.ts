@@ -62,7 +62,9 @@ export class APIHttp implements IRequest {
         if (isHttpStatusOk(res.statusCode)) {
           try {
             httpResponse.payload = JSON.parse(data) as R;
-          } catch {}
+          } catch {
+            // Not JSON: the response has no payload
+          }
         }
 
         resolve(httpResponse);
