@@ -12,6 +12,10 @@ const packages = [
   loadPackage('@punica/request-middleware')
 ];
 const guide = readFileSync(new URL('./guide.md', import.meta.url), 'utf8');
+const migration = readFileSync(
+  new URL('./migration.md', import.meta.url),
+  'utf8'
+);
 
-const server = createPunicaRequestServer({ packages, guide });
+const server = createPunicaRequestServer({ packages, guide, migration });
 await server.connect(new StdioServerTransport());

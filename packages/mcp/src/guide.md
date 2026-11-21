@@ -1,193 +1,292 @@
-# Punica Request: the rules
+# Punica Request 3 — the rules
 
-Punica Request is an HTTP client for TypeScript built around a chain of
-middlewares. The transport is an adapter you pass in.
+An HTTP client built around one chain of middlewares. This guide is for
+version 3. A project that still has 2.x installed has another API: read
+`get_migration_guide` before changing it.
 
-## The packages
+## Packages
 
-- `@punica/request`: `RequestAPI`, `BaseMiddleware`, the types (`IConfig`,
-  `RequestParams`, `HttpResponse`, `ProcessData`, `IRequest`, `IPatch`,
-  `ContentType`, `Subscriber`), `StatusCode`, and helpers (`getCookie`,
-  `setCookie`, `deleteCookie`, `isHttpStatusOk`, `mergeConfig`, `cleanNulls`).
-- `@punica/request-fetch`: `APIFetch`, the adapter for `fetch` (browser, Node).
-- `@punica/request-http`: `APIHttp`, an adapter for Node's `http` module.
-- `@punica/request-middleware`: `TokenAuthMiddleware`, `CookieMiddleware`,
-  `CancelRequestMiddleware`, `CacheMiddleware` with `StorageSession` and
-  `StorageIndexedDB`, `RefreshTokenMiddleware`, `ErrorMiddleware`.
+| Package                      | What it exports                                                                                                                                                                                                                                                                            |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@punica/request`            | `createClient`, `when`, `HttpError`, `RequestError`, `isHttpError`, `isRequestError`, `StatusCode`, `getCookie` / `setCookie` / `deleteCookie`, and the types (`Client`, `ClientConfig`, `RequestOptions`, `RequestContext`, `HttpResponse`, `Middleware`, `Next`, `Adapter`, `IPatch`, …) |
+| `@punica/request-fetch`      | `fetchAdapter` — browsers, Node 18+, workers                                                                                                                                                                                                                                               |
+| `@punica/request-http`       | `httpAdapter` — Node `http`/`https`: agents, certificates                                                                                                                                                                                                                                  |
+| `@punica/request-middleware` | `tokenAuth`, `cookie`, `cancel`, `cache` (+ `StorageSession`, `StorageIndexedDB`, `IStorage`, `CacheEntry`), `refreshToken`, `onError`                                                                                                                                                     |
 
-There is no XHR adapter and no decorator to write: an application creates a
-`RequestAPI` and calls its methods. Every package has one entry point; do not
-import from `dist/` or from a sub-path. Use `search_api` for the exact list.
+Each package has one entry point. The core has no adapter of its own: a
+client always needs one. Install the core next to the others, they have it
+as a peer dependency.
 
-## A request
+## A client
 
 ```ts
-import { RequestAPI, type IConfig } from "@punica/request";
-import { APIFetch } from "@punica/request-fetch";
+import { createClient } from '@punica/request';
+import { fetchAdapter } from '@punica/request-fetch';
 
-const config: IConfig = {
-  hostname: "https://api.example.com/",
-  requestInit: { headers: { Accept: "application/json" } },
-  requestMiddlewares: [],
-  responseMiddlewares: [],
-};
-
-const api = new RequestAPI(new APIFetch(), config);
-
-type Item = { id: number; name: string };
-
-const response = await api.get<never, Item[]>({
-  path: "items",
-  query: { page: "2" },
-  contentType: "json",
+export const api = createClient({
+  baseURL: 'https://api.example.com/v1',
+  adapter: fetchAdapter(),
+  headers: { Accept: 'application/json' },
+  timeout: 10_000
 });
-
-response.payload; // Item[] | undefined
-response.status; // 200
 ```
 
-- The methods are `get`, `delete`, `post`, `put`, `patch`. Each takes one
-  `RequestParams` object and resolves with
-  `HttpResponse`: `{ payload?, status, response }`. The type arguments are
-  `<Sent, Received>`.
-- **The address is `hostname + path`, joined as they are.** End `hostname`
-  with a slash and write paths without a leading one, or the other way round.
-  `query` is appended as a query string; leave out values that are `null`
-  or `undefined`, they are sent as the texts "null" and "undefined".
-- **`contentType` is how the body of the response is read**, not a MIME
-  type: `"json"`, `"text"`, `"blob"`, `"arrayBuffer"` or `"formData"`. It is a
-  type, not an enum: write the string. Without it the response has no payload.
-- **The body is sent as it is given.** For JSON write
-  `data: JSON.stringify(value)` and set the header:
-  `init: { headers: { "Content-Type": "application/json" } }`. A `GET` takes
-  no body.
-- `init` is the `RequestInit` of this request; it is merged over
-  `config.requestInit`. Write headers as a plain object, not as a `Headers`
-  instance.
+`ClientConfig`: `adapter` (required), `baseURL`, `headers`, `timeout` (ms,
+the whole request), `throwHttpErrors` (default `true`), `init` (passed to
+the adapter: `credentials`, `mode`, `redirect`, …), `middlewares`.
 
-## What a request resolves and rejects with
+- `baseURL` and the path are joined whatever slashes they have:
+  `'https://x/v1'` + `'items'` or `'/items'` → `https://x/v1/items`.
+- With a `baseURL`, a path that leads to another origin
+  (`'https://other.example/…'`) is refused. Use a second client for
+  another server.
+- A relative `baseURL` (`'/api'`) works in a page only; on a server give
+  the whole address.
 
-- **A response that is not 2xx resolves**, with its `status` and no
-  `payload`. Check `response.status` (or `isHttpStatusOk(status)`), or add an
-  `ErrorMiddleware` to have such requests reject.
-- A request rejects when it cannot be sent (no network, cancelled), when a
-  middleware calls `processData.reject`, and with `ErrorMiddleware` for a
-  status that is not 2xx. `ErrorMiddleware` rejects with the `ProcessData` of
-  the request (its `httpResponse.status`, and the error body as `body`), not
-  with an `Error`.
+## Requests
+
+```ts
+import { api } from './api';
+
+interface Item {
+  id: number;
+  name: string;
+}
+
+const list = await api.get<Item[]>('items', {
+  query: { page: 2, tags: ['a', 'b'], search: undefined }
+});
+const created = await api.post<Item>('items', { json: { name: 'Paper' } });
+
+await api.put<Item>(`items/${created.data.id}`, { json: { name: 'Pen' } });
+await api.patch<Item>('items/1', {
+  json: [{ op: 'replace', path: '/name', value: 'Ink' }]
+});
+await api.delete('items/1');
+
+const form = new FormData();
+
+await api.post('upload', { body: form });
+
+console.log(list.status, list.headers.get('x-total'), list.data);
+```
+
+- The methods: `get`, `post`, `put`, `patch`, `delete`, `head` and
+  `request(method, path, options)`. The path is the first argument, a
+  string. One type argument: the type of `data`.
+- `RequestOptions`: `query`, `json`, `body`, `headers`, `responseType`,
+  `signal`, `timeout`, `throwHttpErrors`, `init`, and `cache` when the
+  cache middleware is imported.
+- `query`: `null` and `undefined` are left out, an array repeats its name
+  (`tags=a&tags=b`), a `Date` is written as ISO text. `URLSearchParams`
+  works too.
+- `json` is serialised and gets `Content-Type: application/json`. `body`
+  is sent as it is (`FormData`, `Blob`, `URLSearchParams`, text, a buffer).
+  Never both. Never `JSON.stringify` yourself. Do not set a `Content-Type`
+  for `FormData`. `GET` and `HEAD` have no body.
+- Headers of a request are added to those of the client; `undefined`
+  removes one for that request.
+- A response is `{ ok, status, headers, data, raw }`. `headers` is a
+  `Headers` object. `data` is read by the `Content-Type` of the response:
+  JSON is parsed, text is text, anything else is a `Blob`; no body is
+  `undefined`. `responseType: 'json' | 'text' | 'blob' | 'arrayBuffer' |
+'formData' | 'stream'` decides instead when given.
+
+## Errors
+
+A response outside 2xx **rejects** with an `HttpError`. A request that
+brought no usable response rejects with a `RequestError` whose `reason` is
+`'network'`, `'timeout'`, `'abort'` or `'parse'`.
+
+```ts
+import { isHttpError, isRequestError } from '@punica/request';
+import { api } from './api';
+
+try {
+  await api.post('items', { json: { name: '' } });
+} catch (error) {
+  if (isHttpError<{ message: string }>(error)) {
+    console.log(error.status, error.response.data.message);
+  } else if (isRequestError(error)) {
+    console.log(error.reason); // 'network' | 'timeout' | 'abort' | 'parse'
+  } else {
+    throw error;
+  }
+}
+
+// Or get the response back whatever its status
+const response = await api.get('items/9', { throwHttpErrors: false });
+
+if (!response.ok) console.log(response.status);
+```
+
+Use `isHttpError` / `isRequestError`, not `instanceof`: they also recognise
+errors of a second copy of the package. The body of an error response is
+read by its `Content-Type`, whatever `responseType` asked for.
+
+## Cancelling and timeouts
+
+`signal` cancels one request; `timeout` (client or request, `0` for none)
+limits the whole request, middlewares and retries included. Both reject
+with a `RequestError` (`'abort'`, `'timeout'`).
+
+```ts
+import { api } from './api';
+
+const controller = new AbortController();
+const pending = api.get('report', {
+  signal: controller.signal,
+  timeout: 30_000
+});
+
+controller.abort();
+await pending.catch(() => undefined);
+```
 
 ## Middlewares
 
-A request goes through `requestMiddlewares` in their order, is sent, and its
-response goes through `responseMiddlewares` in theirs. A middleware works
-only in the list it is made for:
-
-| Middleware | List | Options | What it does |
-|---|---|---|---|
-| `TokenAuthMiddleware` | request | `cookieName`, `headerName`, `tokenFormat?` (`"Bearer ${token}"`) | Puts the token of a cookie into a header |
-| `CookieMiddleware` | request | `cookieName`, `headerName` | Copies a cookie into a header |
-| `CancelRequestMiddleware` | request | `timeout?` (ms), `getKey?` | Cancels a request when one with the same method and path is sent again or the timeout is over; `cancelAllRequests()` |
-| `CacheMiddleware` | request | `storage` | Answers a `GET` whose params have `cache` from the storage, and stores its response |
-| `RefreshTokenMiddleware` | response | `tokenProvider: { refreshToken(): Promise<boolean> }`, `exclude?` | On a 401, refreshes the token once and sends the request again, once |
-| `ErrorMiddleware` | response | `contentType`, `error: { [status]: async (processData) => … }` | Calls the handler of the status, then rejects |
+One list, `middlewares`, from the outermost to the one next to the
+adapter. A request passes them in that order, its response passes them in
+reverse.
 
 ```ts
+import { createClient, when } from '@punica/request';
+import { fetchAdapter } from '@punica/request-fetch';
 import {
-  CacheMiddleware,
-  CancelRequestMiddleware,
-  ErrorMiddleware,
-  RefreshTokenMiddleware,
-  StorageSession,
-  TokenAuthMiddleware,
-} from "@punica/request-middleware";
+  cache,
+  cancel,
+  onError,
+  refreshToken,
+  tokenAuth,
+  StorageSession
+} from '@punica/request-middleware';
 
-const config: IConfig = {
-  hostname: "https://api.example.com/",
-  requestMiddlewares: [
-    new TokenAuthMiddleware({ cookieName: "token", headerName: "Authorization" }),
-    new CancelRequestMiddleware({ timeout: 10_000 }),
-    new CacheMiddleware({ storage: new StorageSession() }),
-  ],
-  responseMiddlewares: [
-    new RefreshTokenMiddleware({
-      tokenProvider: { refreshToken: () => session.refresh() },
+const latest = cancel();
+
+export const api = createClient({
+  baseURL: 'https://api.example.com/v1',
+  adapter: fetchAdapter(),
+  middlewares: [
+    onError({
+      401: () => location.assign('/login'),
+      default: (response) => console.error('Request failed', response.status)
     }),
-    new ErrorMiddleware({
-      contentType: "json",
-      error: {
-        401: async () => router.go("/login"),
-        500: async ({ body }) => notify(body.message),
-      },
+    refreshToken({
+      refresh: () => refreshSession(),
+      exclude: (context) => context.url.pathname.endsWith('/auth/refresh')
     }),
-  ],
+    tokenAuth({ cookieName: 'token' }),
+    cache({ storage: new StorageSession() }),
+    when((context) => context.method === 'GET', latest)
+  ]
+});
+
+declare function refreshSession(): Promise<boolean>;
+
+await api.get('countries', { cache: { ttl: 60_000 } });
+latest.cancelAll();
+```
+
+The order matters. Two rules:
+
+1. `onError` goes **before** `refreshToken`: it then sees the response the
+   caller gets, after the refresh.
+2. `refreshToken` goes **before** `tokenAuth` / `cookie`: the request it
+   sends again passes them and takes the new token.
+
+`cache` and `cancel` go after those.
+
+| Middleware                                                             | What it does                                                                                                                                            |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tokenAuth({ cookieName } \| { getToken }, headerName?, tokenFormat?)` | Sends a token: from a cookie, or from `getToken(context)` (may be async). Default header `Authorization`, format `'Bearer ${token}'`.                   |
+| `cookie({ cookieName, headerName })`                                   | Sends the value of a cookie in a header (CSRF).                                                                                                         |
+| `cancel({ getKey? })`                                                  | The same request sent again cancels the earlier one (same method and address without query). Returns the middleware with `cancelAll()`.                 |
+| `cache({ storage, getKey? })`                                          | Answers `GET` requests made with `cache: true` or `cache: { ttl }` (ms) from the storage. Keeps 2xx responses only.                                     |
+| `refreshToken({ refresh, exclude? })`                                  | On a 401: calls `refresh` once for all requests that failed meanwhile, sends each again once. `refresh` returning `false` leaves the 401 as the answer. |
+| `onError({ [status]: handler, default? })`                             | Calls `handler(response, context)` for responses outside 2xx; the request still rejects with its `HttpError`. Silent for `throwHttpErrors: false`.      |
+| `when(predicate, middleware)` (core)                                   | Limits a middleware to some requests.                                                                                                                   |
+
+`StorageSession` keeps JSON and text until the tab is closed;
+`StorageIndexedDB` keeps binary bodies too, across visits. A storage of
+your own implements `IStorage`: `get(key)`, `set(key, entry)`, optionally
+`delete(key)`.
+
+## A middleware of your own
+
+A function of `(context, next)` that returns a response. Before
+`await next()` is the way out, after it the way back.
+
+```ts
+import type { Middleware } from '@punica/request';
+
+export const timing: Middleware = async (context, next) => {
+  const started = Date.now();
+
+  context.headers.set('X-Request-Started', String(started));
+
+  const response = await next();
+
+  console.log(
+    context.method,
+    context.url.pathname,
+    response.status,
+    Date.now() - started
+  );
+
+  return response;
 };
 ```
 
-- `RefreshTokenMiddleware` comes **before** `ErrorMiddleware`; after it, the
-  401 is rejected before it can be refreshed. When `refreshToken()` resolves
-  `false` the request is not sent again and its 401 goes on to the next
-  middleware.
-- `CancelRequestMiddleware` treats requests with the same method and path as
-  one: a new search cancels the one before it, whatever its query, and two
-  `POST`s to one path cancel each other too. To let requests that differ in
-  their query run side by side:
-  `getKey: ({ params }) => params.requestURL`; to keep it away from writes:
-  `getAvailableMethods: () => ["GET"]`. A signal given in `init.signal` still
-  cancels the request.
-- A `tokenProvider` that refreshes through the same `RequestAPI` must name its
-  own request: `exclude: ({ params }) => params.path === "auth/refresh"`.
-  Otherwise a 401 for the refresh waits for itself.
-- A status without a handler in `ErrorMiddleware` is rejected too; a message
-  in the console asks for the handler.
-- Caching is asked for per request: `api.get({ path, contentType: "json", cache: {} })`,
-  or `cache: { expireTime: 60_000 }` (milliseconds). Only `GET` is cached.
-  `StorageSession` keeps `json` and `text` until the tab closes;
-  `StorageIndexedDB` keeps them across visits. A storage of your own
-  implements `IStorage` (`read(url)`, `write(url, contentType, body, expireTime?)`).
-- Every middleware also takes `getActive: () => boolean` and
-  `getAvailableMethods: () => ["GET", …]` to switch it off or limit it.
-- The cookie middlewares read `document.cookie`; outside a browser they find
-  no cookie.
+- Always **return** a response: `return next()`, what `await next()` gave,
+  or one of your own (`{ ok, status, headers: new Headers(), data }`). A
+  middleware that returns nothing rejects the request.
+- Reject by throwing.
+- A response outside 2xx arrives as a **response**, not as an error: check
+  `response.status` or `response.ok`; no `try` is needed for that. The
+  `HttpError` is thrown after every middleware has returned. Only
+  `RequestError`s (no response at all) are thrown through `next()`.
+- `next()` may be called again to send the request again. Change headers
+  with `context.headers.set`, never `append`, so a retry does not double
+  them.
+- `context`: `method`, `url` (a `URL`), `headers` (`Headers`), `body`,
+  `responseType`, `init`, `options` (the options of the request), `signal`,
+  `abort()`, `throwHttpErrors`.
+- State of one request is a local variable. State shared by all requests
+  lives in the closure of a factory: `const mine = (options) => { let
+shared; return async (context, next) => { … }; }`.
+- Options of your own on a request: augment `RequestOptions`
+  (`declare module '@punica/request' { interface RequestOptions { retry?: number } }`)
+  and read `context.options.retry`.
 
-## Your own middleware
+## An adapter of your own
 
 ```ts
-import { BaseMiddleware, type ProcessData } from "@punica/request";
+import type { Adapter } from '@punica/request';
 
-class TraceMiddleware extends BaseMiddleware {
-  public process(processData: ProcessData): void {
-    processData.params.init.headers = {
-      ...processData.params.init.headers,
-      "X-Trace": crypto.randomUUID(),
-    };
-
-    this.next(processData);
-  }
-}
+export const mockAdapter: Adapter = async (context) =>
+  new Response(JSON.stringify({ path: context.url.pathname }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  });
 ```
 
-- `process` must end in exactly one of `this.next(processData)`,
-  `processData.resolve(httpResponse)` or `processData.reject(error)`. A
-  middleware that does none of them leaves the request unsettled.
-- `processData` holds `config`, `params` (with `requestURL` and `init`),
-  `method`, `notifier`, and in a response middleware `httpResponse`. It is a
-  type: never `new ProcessData()`.
-- The instance is shared by every request of the API: keep nothing about one
-  request on `this`. Keep it on `processData`, or in a `WeakMap` keyed by it.
-- `this.restart(processData)` sends the request again from the first
-  middleware (since 2.7).
-- To act when the response has arrived, from a request middleware:
-  `processData.notifier.addSubscriber({ key, update: async (processData) => … })`.
+An adapter gets the `context` and returns a Fetch `Response` for any
+status, its body unread. It rejects only when no response came. Reading
+the body, statuses and timeouts are the client's work.
 
-## Your own adapter
+## Node
 
-Implement `IRequest`: a `config` setter and `get`, `delete`, `post`, `put`,
-`patch`, each `(params: RequestParams<T>) => Promise<HttpResponse<R>>`. Send
-to `params.requestURL` with `params.init`, read the body as
-`params.contentType` says, and resolve for every status.
+`fetchAdapter()` works in Node 18 and later. `httpAdapter({ httpAgent,
+httpsAgent, requestOptions })` is for agents, proxies and certificates; it
+does not follow redirects and does not decompress. `tokenAuth({
+cookieName })` and `cookie` read `document.cookie`: on a server use
+`tokenAuth({ getToken })`.
 
-`APIHttp` of `@punica/request-http` is limited: plain `http` to the default
-port, `hostname` without a scheme, JSON responses, and it does not send the
-query. For Node prefer `APIFetch`, which uses the `fetch` of Node.
+## Checklist
 
-Documentation: https://request.punicalab.com
+- [ ] `createClient({ adapter: fetchAdapter(), … })`; names imported from the right package.
+- [ ] The path is the first argument; `json` for JSON bodies; no `JSON.stringify`.
+- [ ] Reads `response.data`; handles failures with `isHttpError` / `isRequestError`.
+- [ ] One `middlewares` list: `onError`, `refreshToken`, `tokenAuth`/`cookie`, `cache`, `cancel`.
+- [ ] Own middlewares return `next()` or a response.
+- [ ] `validate_code` reports nothing.

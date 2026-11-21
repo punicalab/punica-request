@@ -44,8 +44,8 @@ and at most 88 characters; a hook checks it.
 
 A change that reaches users needs a changeset: run `pnpm changeset`, pick the
 packages and whether it is a patch, a minor or a major change, and commit the
-file it writes. `@punica/request`, `@punica/request-fetch` and
-`@punica/request-middleware` share one version.
+file it writes. `@punica/request`, `@punica/request-fetch`,
+`@punica/request-http` and `@punica/request-middleware` share one version.
 
 ## Releases
 
