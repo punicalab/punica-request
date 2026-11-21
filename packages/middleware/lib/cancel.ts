@@ -33,16 +33,32 @@ export interface CancelMiddleware extends Middleware {
 export const cancel = (options: CancelOptions = {}): CancelMiddleware => {
   const { getKey } = options;
   const underWay = new Map<string, RequestContext>();
+  /** The order the requests were made in: an attempt sent again keeps its place. */
+  const order = new WeakMap<RequestContext, number>();
+  let count = 0;
 
   const middleware: Middleware = async function cancel(context, next) {
+    // Cancelled already, and passing by on its way out: it has no say
+    if (context.signal.aborted) return next();
+
+    if (!order.has(context)) order.set(context, (count += 1));
+
     const key =
       getKey?.(context) ??
       `${context.method} ${context.url.origin}${context.url.pathname}`;
-    const earlier = underWay.get(key);
+    const other = underWay.get(key);
 
-    // The request itself, sent again after a token was refreshed, is not
-    // an earlier one
-    if (earlier && earlier !== context) earlier.abort();
+    if (other && other !== context) {
+      // Sent again, after a token was refreshed, while a later request
+      // took its place: the later one stays
+      if ((order.get(other) ?? 0) > (order.get(context) ?? 0)) {
+        context.abort();
+
+        return next();
+      }
+
+      other.abort();
+    }
 
     underWay.set(key, context);
 

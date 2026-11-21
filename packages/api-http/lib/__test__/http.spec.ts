@@ -2,6 +2,7 @@ import http from 'http';
 import https from 'https';
 import { EventEmitter } from 'events';
 import { gzipSync } from 'zlib';
+import net from 'net';
 import type { AddressInfo } from 'net';
 import { createClient, isHttpError, isRequestError } from '@punica/request';
 import { httpAdapter } from '..';
@@ -269,6 +270,98 @@ describe('httpAdapter', () => {
     await api.get('items');
 
     expect(seen[0].headers.host).toBe('example.test');
+  });
+
+  test('uses the agent of requestOptions when it is given no other', async () => {
+    const agent = new http.Agent({ keepAlive: true });
+    const created = jest.spyOn(agent, 'createConnection' as any);
+    const api = createClient({
+      baseURL,
+      adapter: httpAdapter({ requestOptions: { agent } })
+    });
+
+    try {
+      await api.get('items');
+
+      expect(created).toHaveBeenCalledTimes(1);
+    } finally {
+      agent.destroy();
+    }
+  });
+
+  test('sends a body to an address that holds credentials', async () => {
+    const api = createClient({
+      baseURL: baseURL.replace('http://', 'http://user:pw@'),
+      adapter: httpAdapter()
+    });
+
+    await api.post('echo', { json: { a: 1 } });
+
+    expect(seen[0].body).toBe('{"a":1}');
+    expect(seen[0].headers.authorization).toBe(
+      `Basic ${Buffer.from('user:pw').toString('base64')}`
+    );
+  });
+
+  test('a server that switches protocols instead of answering rejects', async () => {
+    const raw = net.createServer((socket) => {
+      socket.once('data', () =>
+        socket.write(
+          'HTTP/1.1 101 Switching Protocols\r\nUpgrade: x\r\nConnection: Upgrade\r\n\r\n'
+        )
+      );
+    });
+
+    await new Promise<void>((resolve) => raw.listen(0, '127.0.0.1', resolve));
+
+    try {
+      const api = createClient({
+        baseURL: `http://127.0.0.1:${(raw.address() as AddressInfo).port}`,
+        adapter: httpAdapter()
+      });
+      const error = await api.get('x').catch((e) => e);
+
+      expect(isRequestError(error) && error.reason).toBe('network');
+      expect(String(error.cause)).toMatch(/switched protocols/);
+    } finally {
+      raw.close();
+    }
+  });
+
+  test('a connection cut while the body arrives rejects with reason network', async () => {
+    const raw = net.createServer((socket) => {
+      socket.once('data', () => {
+        socket.write(
+          'HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 100\r\n\r\nhalf'
+        );
+        setTimeout(() => socket.destroy(), 20);
+      });
+    });
+
+    await new Promise<void>((resolve) => raw.listen(0, '127.0.0.1', resolve));
+
+    try {
+      const api = createClient({
+        baseURL: `http://127.0.0.1:${(raw.address() as AddressInfo).port}`,
+        adapter: httpAdapter()
+      });
+      const error = await api.get('x').catch((e) => e);
+
+      expect(isRequestError(error) && error.reason).toBe('network');
+    } finally {
+      raw.close();
+    }
+  });
+
+  test('the timeout of requestOptions ends a request on an idle socket', async () => {
+    const api = createClient({
+      baseURL,
+      adapter: httpAdapter({ requestOptions: { timeout: 50 } })
+    });
+    const error = await api.get('slow').catch((e) => e);
+
+    expect(isRequestError(error) && error.reason).toBe('network');
+    expect(String(error.cause)).toMatch(/socket timed out/);
   });
 
   test('sends requests to https addresses with the https module and its agent', async () => {

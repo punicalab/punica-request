@@ -40,7 +40,11 @@ export class StorageSession implements IStorage {
     try {
       const entry = JSON.parse(written);
 
-      return entry && typeof entry.status === 'number' ? entry : null;
+      return entry &&
+        typeof entry.status === 'number' &&
+        Array.isArray(entry.headers)
+        ? entry
+        : null;
     } catch {
       // Not written by this storage
       return null;

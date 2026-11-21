@@ -68,46 +68,61 @@ export const cache = (options: CacheOptions): Middleware => {
     // The same address read as text and as JSON are two answers
     const key =
       getKey?.(context) ?? `${context.responseType ?? ''} ${context.url.href}`;
-    let entry: CacheEntry | null | undefined;
+    let cached: HttpResponse | undefined;
+    let stale = false;
 
     try {
-      entry = await storage.get(key);
+      const entry: CacheEntry | null | undefined = await storage.get(key);
 
-      if (
-        entry &&
-        entry.expiresAt !== undefined &&
-        Date.now() >= entry.expiresAt
-      ) {
-        entry = undefined;
-        await storage.delete?.(key);
+      if (entry) {
+        const expired =
+          entry.expiresAt !== undefined && Date.now() >= entry.expiresAt;
+
+        stale = true;
+
+        if (!expired && typeof entry.status === 'number') {
+          cached = {
+            ok: true,
+            status: entry.status,
+            headers: new Headers(entry.headers),
+            data: entry.data
+          };
+          stale = false;
+        }
       }
     } catch {
       // A cache that cannot be read is an empty one: the request is sent
     }
 
-    if (entry) {
-      return {
-        ok: true,
-        status: entry.status,
-        headers: new Headers(entry.headers),
-        data: entry.data
-      };
+    if (cached) return cached;
+
+    if (stale) {
+      try {
+        // Expired, or not an entry: it is in the way
+        await storage.delete?.(key);
+      } catch {
+        // The response will take its place
+      }
     }
 
     const response: HttpResponse = await next();
+    const ttl = typeof asked === 'object' ? asked.ttl : undefined;
 
-    if (response.ok) {
-      const ttl = typeof asked === 'object' ? asked.ttl : undefined;
+    // A ttl that is over at once keeps nothing
+    if (response.ok && (ttl === undefined || ttl > 0)) {
       const headers: Array<[string, string]> = [];
 
-      response.headers.forEach((value, name) => headers.push([name, value]));
+      // Cookies are for the browser, once; they are not kept
+      response.headers.forEach((value, name) => {
+        if (name.toLowerCase() !== 'set-cookie') headers.push([name, value]);
+      });
 
       try {
         await storage.set(key, {
           status: response.status,
           headers,
           data: response.data,
-          ...(ttl && ttl > 0 ? { expiresAt: Date.now() + ttl } : {})
+          ...(ttl ? { expiresAt: Date.now() + ttl } : {})
         });
       } catch {
         // The response is what was asked for; the cache is a convenience

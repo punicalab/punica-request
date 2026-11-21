@@ -555,6 +555,25 @@ describe('timeout', () => {
     expect(settled).toBe(false);
   });
 
+  it.each([Infinity, 2 ** 31, 3e9, -5, NaN])(
+    'of %p does not end the request at once',
+    async (timeout) => {
+      const { adapter } = recorder(
+        () =>
+          new Promise<Response>((resolve) =>
+            setTimeout(() => resolve(json({ ok: 1 })), 5000)
+          )
+      );
+      const api = createClient({ baseURL, adapter, timeout });
+      const pending = api.get('items');
+
+      await jest.advanceTimersByTimeAsync(5000);
+
+      expect((await pending).data).toEqual({ ok: 1 });
+      expect(jest.getTimerCount()).toBe(0);
+    }
+  );
+
   it('leaves no timer behind, however the request ends', async () => {
     const { adapter } = recorder(json({}), json({}, 500), new Error('down'));
     const api = createClient({ baseURL, adapter, timeout: 1000 });
@@ -662,15 +681,114 @@ describe('cancellation', () => {
     });
   });
 
-  it('after the request is over changes nothing', async () => {
+  it('after the request is over does not reach the request any more', async () => {
     const controller = new AbortController();
-    const { adapter } = recorder(json({ id: 1 }));
-    const api = createClient({ baseURL, adapter });
-    const response = await api.get('items', { signal: controller.signal });
+    let signal: AbortSignal | undefined;
+    const rejections: unknown[] = [];
+    const onRejection = (reason: unknown) => rejections.push(reason);
+    const api = createClient({
+      baseURL,
+      adapter: async (context) => {
+        signal = context.signal;
 
-    controller.abort();
-    await new Promise((resolve) => setTimeout(resolve, 0));
+        return json({ id: 1 });
+      }
+    });
 
-    expect(response.data).toEqual({ id: 1 });
+    process.on('unhandledRejection', onRejection);
+
+    try {
+      await api.get('items', { signal: controller.signal });
+      controller.abort();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(signal?.aborted).toBe(false);
+      expect(rejections).toEqual([]);
+    } finally {
+      process.off('unhandledRejection', onRejection);
+    }
+  });
+
+  describe('of a stream, which is read after the request', () => {
+    const body = () =>
+      new Response('abc', { headers: { 'content-type': 'text/plain' } });
+    const spied = () => {
+      const controller = new AbortController();
+
+      return {
+        controller,
+        add: jest.spyOn(controller.signal, 'addEventListener'),
+        remove: jest.spyOn(controller.signal, 'removeEventListener')
+      };
+    };
+    const stream = async (signal: AbortSignal) => {
+      let inner: AbortSignal | undefined;
+      const api = createClient({
+        baseURL,
+        timeout: 1000,
+        adapter: async (context) => {
+          inner = context.signal;
+
+          return body();
+        }
+      });
+      const { data } = await api.get<ReadableStream<Uint8Array>>('events', {
+        signal,
+        responseType: 'stream'
+      });
+
+      return { data, inner: inner as AbortSignal };
+    };
+
+    it('still follows the signal of the caller while it is read', async () => {
+      const { controller, remove } = spied();
+      const { inner } = await stream(controller.signal);
+
+      expect(remove).not.toHaveBeenCalled();
+
+      controller.abort();
+
+      expect(inner.aborted).toBe(true);
+    });
+
+    it('lets go of the signal once it has been read', async () => {
+      const { controller, add, remove } = spied();
+
+      for (let i = 0; i < 3; i++) {
+        const { data } = await stream(controller.signal);
+
+        expect(await new Response(data).text()).toBe('abc');
+      }
+
+      expect(add).toHaveBeenCalledTimes(3);
+      expect(remove).toHaveBeenCalledTimes(3);
+    });
+
+    it('lets go of the signal when it is given up', async () => {
+      const { controller, remove } = spied();
+      const { data, inner } = await stream(controller.signal);
+
+      await data.cancel();
+      controller.abort();
+
+      expect(remove).toHaveBeenCalledTimes(1);
+      expect(inner.aborted).toBe(false);
+    });
+
+    it('is not ended by the timeout, which is over when the response is there', async () => {
+      jest.useFakeTimers();
+
+      try {
+        const { data, inner } = await stream(new AbortController().signal);
+
+        await jest.advanceTimersByTimeAsync(5000);
+
+        expect(jest.getTimerCount()).toBe(0);
+        expect(inner.aborted).toBe(false);
+        expect(await new Response(data).text()).toBe('abc');
+      } finally {
+        jest.useRealTimers();
+      }
+    });
   });
 });

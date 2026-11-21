@@ -110,12 +110,22 @@ export const buildURL = (
   let url: URL | undefined;
 
   if (base) {
-    // "/items" is under the base, not at the root of its server
-    url = parse(path.replace(/^\/+/, ''), base);
+    // A whole address is taken as one. Anything else is a path under the
+    // base: "/items" is not the root of its server, and "items:batch" is
+    // not an address with the scheme "items"
+    url = /^https?:\/\//i.test(path)
+      ? parse(path)
+      : parse(`./${path.replace(/^\/+/, '')}`, base);
 
-    if (!url || url.origin !== base.origin) {
+    if (
+      !url ||
+      url.origin !== base.origin ||
+      !url.pathname.startsWith(base.pathname) ||
+      url.username !== base.username ||
+      url.password !== base.password
+    ) {
       throw new TypeError(
-        `"${path}" leads away from the baseURL of the client (${base.origin}). Use a path under it, or a client of its own for the other address.`
+        `"${path}" leads away from the baseURL of the client (${base.origin}${base.pathname}). Use a path under it, or a client of its own for the other address.`
       );
     }
   } else {

@@ -1,3 +1,4 @@
+/** The HTTP status codes, by name: `StatusCode.NOT_FOUND` is 404. */
 export enum StatusCode {
   /**
    * @see {@link https://tools.ietf.org/html/rfc7231#section-6.2.1}

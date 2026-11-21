@@ -133,6 +133,75 @@ describe('cancel', () => {
     expect((await pending).data).toEqual({ ok: 1 });
   });
 
+  test('a request that waits for a token does not cancel a later one when it is sent again', async () => {
+    const { adapter, requests } = manual();
+    const refreshed = deferred<boolean>();
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [
+        refreshToken({ refresh: () => refreshed.promise }),
+        cancel()
+      ]
+    });
+    const older = reasonOf(api.get('search', { query: { q: 'old' } }));
+
+    await settled();
+    requests[0].answer(json({}, 401));
+    await settled();
+
+    // Sent while the older one waits for the token
+    const newer = reasonOf(api.get('search', { query: { q: 'new' } }));
+
+    await settled();
+    refreshed.resolve(true);
+    await settled();
+
+    // The older one gives way instead of taking the place back
+    expect(await older).toBe('abort');
+    expect(requests).toHaveLength(2);
+    expect(requests[1].signal.aborted).toBe(false);
+
+    requests[1].answer(json({}));
+
+    expect(await newer).toBe('answered');
+  });
+
+  test('a request cancelled while it waits for a token cancels nothing when the token comes', async () => {
+    const { adapter, requests } = manual();
+    const refreshed = deferred<boolean>();
+    const controller = new AbortController();
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [
+        refreshToken({ refresh: () => refreshed.promise }),
+        cancel()
+      ]
+    });
+    const dead = reasonOf(api.get('search', { signal: controller.signal }));
+
+    await settled();
+    requests[0].answer(json({}, 401));
+    await settled();
+    controller.abort();
+
+    expect(await dead).toBe('abort');
+
+    const live = reasonOf(api.get('search'));
+
+    await settled();
+    refreshed.resolve(true);
+    await settled();
+
+    expect(requests).toHaveLength(2);
+    expect(requests[1].signal.aborted).toBe(false);
+
+    requests[1].answer(json({}));
+
+    expect(await live).toBe('answered');
+  });
+
   test('a request whose caller cancelled it before it was sent cancels nothing else', async () => {
     const { adapter, requests } = manual();
     const api = createClient({ baseURL, adapter, middlewares: [cancel()] });

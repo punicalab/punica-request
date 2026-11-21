@@ -156,6 +156,51 @@ describe('refreshToken', () => {
     expect(sent).toHaveLength(2);
   });
 
+  test('a token that could not be refreshed leaves every waiting request its 401', async () => {
+    const { adapter, sent } = recorder(json({}, 401));
+    const refresh = jest.fn(async () => {
+      await settled();
+
+      return false;
+    });
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [refreshToken({ refresh })]
+    });
+    const results = await Promise.allSettled([api.get('a'), api.get('b')]);
+
+    expect(
+      results.map((one) => (one as PromiseRejectedResult).reason.status)
+    ).toEqual([401, 401]);
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(sent).toHaveLength(2);
+  });
+
+  test('a request cancelled while the token is refreshed is not sent again', async () => {
+    const refreshed = deferred<boolean>();
+    const controller = new AbortController();
+    const { adapter, sent } = recorder(json({}, 401));
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [refreshToken({ refresh: () => refreshed.promise })]
+    });
+    const pending = api
+      .get('items', { signal: controller.signal })
+      .catch((e) => e);
+
+    await settled();
+    controller.abort();
+
+    expect((await pending).reason).toBe('abort');
+
+    refreshed.resolve(true);
+    await settled();
+
+    expect(sent).toHaveLength(1);
+  });
+
   test('refreshes again for a 401 that comes later', async () => {
     const valid = { token: 't1' };
     let token = 't0';
@@ -349,6 +394,58 @@ describe('onError', () => {
 
     expect((await api.get('items')).data).toEqual({ ok: 1 });
     expect(handler).not.toHaveBeenCalled();
+  });
+
+  test('is silent for a request that was cancelled before its response got here', async () => {
+    const handler = jest.fn();
+    const controller = new AbortController();
+    const held = deferred<void>();
+    const { adapter } = recorder(json({}, 401));
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [
+        onError({ 401: handler }),
+        async (_, next) => {
+          const response = await next();
+
+          await held.promise;
+
+          return response;
+        }
+      ]
+    });
+    const pending = api
+      .get('items', { signal: controller.signal })
+      .catch((e) => e);
+
+    await settled();
+    controller.abort();
+
+    expect((await pending).reason).toBe('abort');
+
+    held.resolve();
+    await settled();
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  test('a handler that throws rejects the request with what it threw', async () => {
+    const failure = new Error('handler broke');
+    const { adapter } = recorder(json({}, 500));
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [
+        onError({
+          500: () => {
+            throw failure;
+          }
+        })
+      ]
+    });
+
+    await expect(api.get('items')).rejects.toBe(failure);
   });
 
   test('needs its handlers', () => {

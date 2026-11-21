@@ -1,6 +1,6 @@
 import { createClient } from '@punica/request';
-import { cookie, tokenAuth } from '..';
-import { recorder } from './support';
+import { cookie, refreshToken, tokenAuth } from '..';
+import { json, recorder } from './support';
 
 const baseURL = 'https://api.example.com';
 const withCookies = (value: string) => {
@@ -94,6 +94,40 @@ describe('tokenAuth', () => {
     expect(sent[0].headers.authorization).toBe('Bearer t');
   });
 
+  test('a request sent again after the token is gone does not carry the old one', async () => {
+    let token: string | null = 'old';
+    const { adapter, sent } = recorder(json({}, 401));
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [
+        refreshToken({ refresh: () => void (token = null) }),
+        tokenAuth({ getToken: () => token })
+      ]
+    });
+
+    await api.get('items').catch(() => undefined);
+
+    expect(sent.map((one) => one.headers.authorization)).toEqual([
+      'Bearer old',
+      undefined
+    ]);
+  });
+
+  test('leaves a header it did not set alone when there is no token', async () => {
+    const { adapter, sent } = recorder();
+    const api = createClient({
+      baseURL,
+      adapter,
+      headers: { Authorization: 'Basic client' },
+      middlewares: [tokenAuth({ getToken: () => null })]
+    });
+
+    await api.get('items');
+
+    expect(sent[0].headers.authorization).toBe('Basic client');
+  });
+
   test('needs to know where the token is', () => {
     expect(() => tokenAuth({})).toThrow(/where the token is/);
     expect(() => (tokenAuth as any)()).toThrow(TypeError);
@@ -129,6 +163,27 @@ describe('cookie', () => {
     await api.get('items');
 
     expect(sent[0].headers).toEqual({});
+  });
+
+  test('a request sent again after the cookie is gone does not carry the old value', async () => {
+    withCookies('csrf=old');
+
+    const { adapter, sent } = recorder(json({}, 401));
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [
+        refreshToken({ refresh: () => withCookies('') }),
+        cookie({ cookieName: 'csrf', headerName: 'X-CSRF' })
+      ]
+    });
+
+    await api.get('items').catch(() => undefined);
+
+    expect(sent.map((one) => one.headers['x-csrf'])).toEqual([
+      'old',
+      undefined
+    ]);
   });
 
   test('needs both names', () => {

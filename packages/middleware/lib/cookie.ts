@@ -1,5 +1,5 @@
 import { getCookie } from '@punica/request';
-import type { Middleware } from '@punica/request';
+import type { Middleware, RequestContext } from '@punica/request';
 
 /** The options of `cookie`. */
 export interface CookieOptions {
@@ -27,10 +27,19 @@ export const cookie = (options: CookieOptions): Middleware => {
     );
   }
 
+  /** Requests this middleware gave the header to. */
+  const given = new WeakSet<RequestContext>();
+
   return function cookie(context, next) {
     const value = getCookie(cookieName);
 
-    if (value) context.headers.set(headerName, value);
+    if (value) {
+      given.add(context);
+      context.headers.set(headerName, value);
+    } else if (given.has(context)) {
+      // Sent again after the cookie was gone
+      context.headers.delete(headerName);
+    }
 
     return next();
   };

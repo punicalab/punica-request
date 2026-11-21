@@ -42,7 +42,9 @@ export const httpAdapter =
     if (context.body !== null && context.body !== undefined) {
       // A Request knows how each kind of body is written, and its type:
       // the boundary of form data, the encoding of a query
-      const written = new Request(url, {
+      // (at an address of its own: the real one may hold credentials, which
+      // a Request refuses)
+      const written = new Request('http://localhost/', {
         method,
         headers: context.headers,
         body: context.body
@@ -60,7 +62,9 @@ export const httpAdapter =
         url,
         {
           ...options.requestOptions,
-          agent: secure ? options.httpsAgent : options.httpAgent,
+          agent:
+            (secure ? options.httpsAgent : options.httpAgent) ??
+            options.requestOptions?.agent,
           method,
           headers,
           signal
@@ -97,6 +101,19 @@ export const httpAdapter =
       );
 
       request.on('error', reject);
+      // `timeout` of requestOptions: the socket was idle for that long
+      request.on('timeout', () =>
+        request.destroy(new Error('The socket timed out'))
+      );
+      // A server that switches protocols is not answering the request
+      request.on('upgrade', (_incoming, socket) => {
+        socket.destroy();
+        reject(new Error('The server switched protocols instead of answering'));
+      });
+      // Whatever else happened: a request that is over has not been answered
+      request.on('close', () =>
+        reject(new Error('The connection was closed before a response came'))
+      );
       request.end(body);
     });
   };

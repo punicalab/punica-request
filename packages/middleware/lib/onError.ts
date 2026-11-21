@@ -42,7 +42,8 @@ export const onError = (handlers: ErrorHandlers): Middleware => {
   return async function onError(context, next) {
     const response = await next();
 
-    if (!response.ok && context.throwHttpErrors) {
+    // A request that was cancelled meanwhile has rejected already
+    if (!response.ok && context.throwHttpErrors && !context.signal.aborted) {
       await (handlers[response.status] ?? handlers.default)?.(
         response,
         context

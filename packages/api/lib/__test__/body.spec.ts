@@ -47,6 +47,20 @@ describe('headers', () => {
     expect(sent[0].headers).toEqual({ a: '1', b: '2' });
   });
 
+  it('given as pairs keep both values of a name given twice', async () => {
+    const { adapter, sent } = recorder();
+    const api = createClient({ baseURL, adapter, headers: { accept: 'x/y' } });
+
+    await api.get('items', {
+      headers: [
+        ['accept', 'a/b'],
+        ['Accept', 'c/d']
+      ]
+    });
+
+    expect(sent[0].headers.accept).toBe('a/b, c/d');
+  });
+
   it('of one request do not stay on the client', async () => {
     const { adapter, sent } = recorder();
     const api = createClient({ baseURL, adapter, headers: { a: '1' } });
@@ -79,6 +93,26 @@ describe('the body of a request', () => {
     });
 
     expect(sent[0].headers['content-type']).toBe('application/json-patch+json');
+  });
+
+  it('json is not sent under a default of the client that says something else', async () => {
+    const { adapter, sent } = recorder();
+    const form = createClient({
+      baseURL,
+      adapter,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    });
+    const jsonApi = createClient({
+      baseURL,
+      adapter,
+      headers: { 'Content-Type': 'application/vnd.api+json' }
+    });
+
+    await form.post('items', { json: { a: 1 } });
+    await jsonApi.post('items', { json: { a: 1 } });
+
+    expect(sent[0].headers['content-type']).toBe('application/json');
+    expect(sent[1].headers['content-type']).toBe('application/vnd.api+json');
   });
 
   it('json takes null, false and 0 as values', async () => {
@@ -300,11 +334,20 @@ describe('the body of a response', () => {
       responseType: 'stream'
     });
 
-    expect(response.data).toBe(response.raw?.body);
+    expect(response.data).toBeInstanceOf(ReadableStream);
     expect(await new Response(response.data as ReadableStream).text()).toBe(
       'abc'
     );
   });
+
+  it.each(['application/json-seq', 'application/jsonlines', 'text/x-json-ish'])(
+    'is not parsed for %s, which only looks like JSON',
+    async (type) => {
+      const { data } = await read(of('{"a":1}\n{"a":2}', type));
+
+      expect(typeof data === 'string' || data instanceof Blob).toBe(true);
+    }
+  );
 
   it('rejects with reason parse when 2xx JSON cannot be read', async () => {
     const { adapter } = recorder(of('<html>', 'application/json'));

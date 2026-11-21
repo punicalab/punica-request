@@ -4,7 +4,7 @@ import type { HttpResponse, RequestContext, ResponseType } from './types';
 /** What a body is, going by its `Content-Type`. */
 const sniff = (contentType: string | null): ResponseType => {
   if (!contentType) return 'text';
-  if (/[/+]json\b/i.test(contentType)) return 'json';
+  if (/[/+]json\s*(;|$)/i.test(contentType)) return 'json';
 
   if (
     /^\s*text\//i.test(contentType) ||

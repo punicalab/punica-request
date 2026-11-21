@@ -15,6 +15,46 @@ import { buildURL, resolveBase } from './url';
 
 const noop = () => undefined;
 
+/**
+ * The same stream, with a call when nothing is read from it any more: it
+ * ended, failed or was cancelled.
+ */
+const watch = (
+  source: ReadableStream<Uint8Array>,
+  over: () => void
+): ReadableStream<Uint8Array> => {
+  const reader = source.getReader();
+  let told = false;
+  const end = () => {
+    if (!told) over();
+
+    told = true;
+  };
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          end();
+          controller.close();
+        } else {
+          controller.enqueue(value);
+        }
+      } catch (error) {
+        end();
+        controller.error(error);
+      }
+    },
+    cancel(reason) {
+      end();
+
+      return reader.cancel(reason);
+    }
+  });
+};
+
 const isResponse = (value: unknown): value is HttpResponse =>
   typeof value === 'object' &&
   value !== null &&
@@ -161,7 +201,7 @@ export const createClient = (config: ClientConfig): Client => {
         });
     };
 
-    let keepCaller = false;
+    let reading = false;
 
     try {
       if (abort.signal.aborted) throw aborted();
@@ -184,15 +224,21 @@ export const createClient = (config: ClientConfig): Client => {
         throw new HttpError(response, context);
       }
 
-      // A stream is read after the request: its caller can still cancel it
-      keepCaller =
-        context.responseType === 'stream' &&
-        response.raw !== undefined &&
-        response.data === response.raw.body;
+      // A stream is read after the request: its caller can still cancel
+      // it, until it has been read or given up
+      if (
+        response.raw?.body &&
+        response.data === response.raw.body &&
+        typeof ReadableStream === 'function'
+      ) {
+        reading = true;
+        response.data = watch(response.raw.body, abort.dispose);
+      }
 
       return response as HttpResponse<T>;
     } finally {
-      abort.dispose(keepCaller);
+      if (reading) abort.clearTimer();
+      else abort.dispose();
     }
   };
 

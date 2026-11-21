@@ -19,11 +19,35 @@ describe('the address of a request', () => {
     ['https://api.example.com/v1/', 'items'],
     ['https://api.example.com/v1', '/items'],
     ['https://api.example.com/v1/', '/items'],
-    ['https://api.example.com/v1//', '//items']
+    ['https://api.example.com/v1', '//items']
   ])('joins %s and %s whatever their slashes', async (base, path) => {
-    expect((await urlOf(base, path)).replace('v1//', 'v1/')).toBe(
-      'https://api.example.com/v1/items'
-    );
+    expect(await urlOf(base, path)).toBe('https://api.example.com/v1/items');
+  });
+
+  it.each([
+    ['items:batch', '/v1/items:batch'],
+    ['/users:search?q=1', '/v1/users:search?q=1'],
+    ['urn:isbn:1', '/v1/urn:isbn:1'],
+    ['a/b:c', '/v1/a/b:c'],
+    ['javascript:alert(1)', '/v1/javascript:alert(1)'],
+    ['?page=2', '/v1/?page=2']
+  ])(
+    'reads %s as a path under the base, colons included',
+    async (path, expected) => {
+      const url = new URL(await urlOf('https://api.example.com/v1', path));
+
+      expect(url.origin).toBe('https://api.example.com');
+      expect(url.pathname + url.search).toBe(expected);
+    }
+  );
+
+  it('takes a whole address that is under the base', async () => {
+    expect(
+      await urlOf(
+        'https://api.example.com/v1',
+        'https://api.example.com/v1/items'
+      )
+    ).toBe('https://api.example.com/v1/items');
   });
 
   it('keeps the port, deeper paths and the query a path brings', async () => {
@@ -40,9 +64,13 @@ describe('the address of a request', () => {
 
   it.each([
     'https://evil.example/steal',
-    '\\\\evil.example/steal',
+    'HTTPS://evil.example/steal',
     'http://api.example.com/v1/items',
-    'javascript:alert(1)'
+    'https://api.example.com/v2/items',
+    'https://user:secret@api.example.com/v1/items',
+    '../admin',
+    'items/../../admin',
+    '/..\\admin'
   ])('refuses %s, which leads away from the base', async (path) => {
     const { adapter, sent } = recorder();
     const api = createClient({
@@ -54,14 +82,28 @@ describe('the address of a request', () => {
     expect(sent).toHaveLength(0);
   });
 
-  it.each(['//evil.example/steal', '/\\evil.example/steal'])(
-    'reads %s as a path on the server of the base',
+  it.each([
+    '//evil.example/steal',
+    '/\\evil.example/steal',
+    '\\\\evil.example/steal',
+    '\t//evil.example/steal',
+    ' https://evil.example/steal',
+    'https:/evil.example/steal'
+  ])(
+    'reads %j as a path under the base, not as another server',
     async (path) => {
-      expect(new URL(await urlOf('https://api.example.com/v1', path)).origin).toBe(
-        'https://api.example.com'
-      );
+      const url = new URL(await urlOf('https://api.example.com/v1', path));
+
+      expect(url.origin).toBe('https://api.example.com');
+      expect(url.pathname.startsWith('/v1/')).toBe(true);
     }
   );
+
+  it('keeps the credentials of the base', async () => {
+    expect(await urlOf('http://user:pw@host.example/api', 'items')).toBe(
+      'http://user:pw@host.example/api/items'
+    );
+  });
 
   it('takes a whole address when the client has no base', async () => {
     expect(await urlOf(undefined, 'https://other.example/x', { a: 1 })).toBe(

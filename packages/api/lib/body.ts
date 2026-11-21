@@ -7,10 +7,16 @@ const apply = (target: Headers, input?: HeadersInput): void => {
   if (input instanceof Headers) {
     input.forEach((value, name) => target.set(name, value));
   } else if (Array.isArray(input)) {
+    // A name given twice has both values, as in `new Headers(pairs)`
+    const seen = new Set<string>();
+
     for (const [name, value] of input as ReadonlyArray<
       readonly [string, string]
     >) {
-      target.set(name, value);
+      if (seen.has(name.toLowerCase())) target.append(name, value);
+      else target.set(name, value);
+
+      seen.add(name.toLowerCase());
     }
   } else {
     const record = input as { [name: string]: string | null | undefined };
@@ -96,7 +102,12 @@ export const prepareBody = (
 
     assertBody(method, serialised);
 
-    if (!headers.has('content-type')) {
+    // The type the request names, or a JSON type of the client
+    // (application/vnd.api+json); never a default that says something else
+    if (
+      !own.has('content-type') &&
+      !/json/i.test(headers.get('content-type') ?? '')
+    ) {
       headers.set('content-type', 'application/json');
     }
 

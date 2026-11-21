@@ -12,11 +12,17 @@ const STORE = 'RESPONSES';
 const databases = new Map<string, Promise<IDBDatabase>>();
 
 const open = (name: string): Promise<IDBDatabase> => {
-  let opening = databases.get(name);
+  const known = databases.get(name);
 
-  if (!opening) {
-    opening = new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(name, 1);
+  if (known) return known;
+
+  const opening: Promise<IDBDatabase> = new Promise<IDBDatabase>(
+    (resolve, reject) => {
+      // Whatever version it has: one that another script upgraded opens too
+      const request = indexedDB.open(name);
+      const forget = () => {
+        if (databases.get(name) === opening) databases.delete(name);
+      };
 
       request.onupgradeneeded = () => {
         if (!request.result.objectStoreNames.contains(STORE)) {
@@ -28,22 +34,20 @@ const open = (name: string): Promise<IDBDatabase> => {
         // Another tab wants to change the database: let it
         request.result.onversionchange = () => {
           request.result.close();
-          databases.delete(name);
+          forget();
         };
+        // Closed by the browser, when the data of the site is cleared
+        request.result.onclose = forget;
         resolve(request.result);
       };
       request.onerror = () => {
-        databases.delete(name);
+        forget();
         reject(request.error);
       };
-      request.onblocked = () => {
-        databases.delete(name);
-        reject(new Error(`The database ${name} is blocked by another tab.`));
-      };
-    });
+    }
+  );
 
-    databases.set(name, opening);
-  }
+  databases.set(name, opening);
 
   return opening;
 };
@@ -54,10 +58,23 @@ const run = async <T>(
   mode: IDBTransactionMode,
   request: (store: IDBObjectStore) => IDBRequest<T>
 ): Promise<T> => {
-  const db = await open(name);
+  const opened = open(name);
+  let transaction: IDBTransaction;
+
+  try {
+    transaction = (await opened).transaction(STORE, mode);
+  } catch (error) {
+    // The connection was closed under us: once more, with a new one
+    if ((error as { name?: string } | null)?.name !== 'InvalidStateError') {
+      throw error;
+    }
+
+    if (databases.get(name) === opened) databases.delete(name);
+
+    transaction = (await open(name)).transaction(STORE, mode);
+  }
 
   return new Promise<T>((resolve, reject) => {
-    const transaction = db.transaction(STORE, mode);
     const pending = request(transaction.objectStore(STORE));
 
     transaction.oncomplete = () => resolve(pending.result);

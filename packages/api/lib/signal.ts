@@ -4,12 +4,10 @@ export interface Abort {
   /** Whether it was the timeout that aborted the request. */
   readonly timedOut: boolean;
   abort(reason?: unknown): void;
-  /**
-   * The request is over: the timer and the listener go.
-   * @param keepCaller - The caller's signal still aborts, for a body that
-   * is read after the request
-   */
-  dispose(keepCaller?: boolean): void;
+  /** The request is over: the timer goes. */
+  clearTimer(): void;
+  /** Nothing of the request is read any more: the timer and the listener go. */
+  dispose(): void;
 }
 
 /**
@@ -36,11 +34,19 @@ export const createAbort = (
   } else {
     given?.addEventListener('abort', onGiven, { once: true });
 
-    if (typeof timeout === 'number' && timeout > 0) {
-      timer = setTimeout(() => {
-        timedOut = true;
-        abort();
-      }, timeout);
+    // Infinity is no limit; a timer takes no more than 2^31 - 1
+    if (
+      typeof timeout === 'number' &&
+      timeout > 0 &&
+      Number.isFinite(timeout)
+    ) {
+      timer = setTimeout(
+        () => {
+          timedOut = true;
+          abort();
+        },
+        Math.min(timeout, 2147483647)
+      );
     }
   }
 
@@ -50,10 +56,12 @@ export const createAbort = (
       return timedOut;
     },
     abort,
-    dispose(keepCaller = false) {
+    clearTimer() {
       clearTimeout(timer);
-
-      if (!keepCaller) given?.removeEventListener('abort', onGiven);
+    },
+    dispose() {
+      clearTimeout(timer);
+      given?.removeEventListener('abort', onGiven);
     }
   };
 };

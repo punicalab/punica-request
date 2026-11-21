@@ -42,12 +42,20 @@ export const tokenAuth = (options: TokenAuthOptions): Middleware => {
     );
   }
 
+  /** Requests this middleware gave the header to. */
+  const given = new WeakSet<RequestContext>();
+
   return async function tokenAuth(context, next) {
     const token = getToken
       ? await getToken(context)
       : getCookie(cookieName as string);
 
-    if (token) {
+    if (!token) {
+      // Sent again after the token was gone: the old one does not go along
+      if (given.has(context)) context.headers.delete(headerName);
+    } else {
+      given.add(context);
+
       // Set, not appended: a request that is sent again carries one token,
       // the one of that moment
       context.headers.set(

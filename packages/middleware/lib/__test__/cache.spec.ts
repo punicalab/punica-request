@@ -86,11 +86,13 @@ describe('StorageSession', () => {
   test('gives nothing for what it did not write', async () => {
     session.set('punica-request:a', 'not json');
     session.set('punica-request:b', '"text"');
+    session.set('punica-request:c', '{"status":200,"headers":"oops","data":1}');
 
     const storage = new StorageSession();
 
     expect(await storage.get('a')).toBeNull();
     expect(await storage.get('b')).toBeNull();
+    expect(await storage.get('c')).toBeNull();
   });
 
   test('writes under its prefix', async () => {
@@ -120,6 +122,27 @@ describe('StorageIndexedDB', () => {
       (await new StorageIndexedDB({ databaseName: 'shared' }).get('a'))?.data
     ).toBe(1);
     expect(await new StorageIndexedDB().get('a')).toBeUndefined();
+  });
+
+  test('opens the database again after its connection was closed', async () => {
+    const storage = new StorageIndexedDB({ databaseName: 'closed' });
+
+    await storage.set('a', entry(1));
+
+    // An upgrade by another script closes our connection (versionchange)
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open('closed', 2);
+
+      request.onsuccess = () => {
+        request.result.close();
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
+
+    expect((await storage.get('a'))?.data).toBe(1);
+    await storage.set('b', entry(2));
+    expect((await storage.get('b'))?.data).toBe(2);
   });
 
   test('answers requests that are made together', async () => {
@@ -285,6 +308,90 @@ describe('cache', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  test.each([
+    ['headers that are no headers', { status: 200, headers: 'oops', data: 1 }],
+    ['no status', { headers: [], data: 1 }],
+    ['a text', 'not an entry']
+  ])('an entry with %s is a miss, and is removed', async (_, broken) => {
+    const storage = memory();
+    const { adapter, sent } = recorder(json({ id: 1 }));
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [cache({ storage })]
+    });
+
+    storage.kept.set(
+      ' https://api.example.com/items',
+      broken as unknown as CacheEntry
+    );
+
+    expect((await api.get('items', { cache: true })).data).toEqual({ id: 1 });
+    expect(sent).toHaveLength(1);
+    expect(storage.delete).toHaveBeenCalledTimes(1);
+    // And the response took its place
+    expect((await api.get('items', { cache: true })).data).toEqual({ id: 1 });
+    expect(sent).toHaveLength(1);
+  });
+
+  test('a storage that cannot delete does not fail the request', async () => {
+    const storage = memory();
+
+    storage.delete = jest.fn(async () => {
+      throw new Error('read only');
+    });
+    storage.kept.set(' https://api.example.com/items', {
+      status: 200,
+      headers: [],
+      data: 'old',
+      expiresAt: 1
+    });
+
+    const { adapter } = recorder(json({ id: 1 }));
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [cache({ storage })]
+    });
+
+    expect((await api.get('items', { cache: true })).data).toEqual({ id: 1 });
+  });
+
+  test('a ttl of 0 or less keeps nothing', async () => {
+    const storage = memory();
+    const { adapter, sent } = recorder(json({ id: 1 }));
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [cache({ storage })]
+    });
+
+    await api.get('items', { cache: { ttl: 0 } });
+    await api.get('items', { cache: { ttl: -1 } });
+
+    expect(sent).toHaveLength(2);
+    expect(storage.kept.size).toBe(0);
+  });
+
+  test('does not keep the cookies a response sets', async () => {
+    const storage = memory();
+    const { adapter } = recorder(
+      json({}, 200, { 'set-cookie': 'sid=secret', 'x-total': '1' })
+    );
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [cache({ storage })]
+    });
+
+    await api.get('items', { cache: true });
+
+    expect([...storage.kept.values()][0].headers).toEqual([
+      ['content-type', 'application/json'],
+      ['x-total', '1']
+    ]);
   });
 
   test('keeps a response without a ttl for as long as the storage does', async () => {
