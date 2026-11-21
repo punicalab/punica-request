@@ -145,7 +145,10 @@ export function createValidator(knowledge) {
         continue;
       }
 
-      for (const part of match[1].split(',')) {
+      // A list may hold comments
+      const list = match[1].replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+
+      for (const part of list.split(',')) {
         const name = part.replace(/^\s*type\s+/, '').trim().split(/\s+as\s+/)[0];
         const item = knowledge.get(name);
 

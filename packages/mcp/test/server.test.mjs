@@ -75,6 +75,21 @@ test('get_api returns the declaration with its documentation', async () => {
   assert.match(api, /hostname: string;/);
   assert.match(api, /responseMiddlewares\?: /);
   assert.match(api, /APIXHR is not exported by/);
+
+  // A declaration with a comment that holds braces is whole
+  const contentType = await call('get_api', { names: ['ContentType'] });
+
+  for (const value of ['arrayBuffer', 'blob', 'formData', 'json', 'text']) {
+    assert.match(contentType, new RegExp(`'${value}'`));
+  }
+
+  // The options of a middleware, which are declared next to its type
+  const cancel = await call('get_api', { names: ['CancelRequestMiddlewareConfig'] });
+
+  assert.match(cancel, /timeout\?: number;/);
+  assert.match(cancel, /getKey\?: /);
+  assert.match(await call('search_api', { query: 'tokenFormat' }), /^TokenAuthMiddlewareConfig \(type/m);
+  assert.match(await call('search_api', { query: 'exclude' }), /^RefreshTokenMiddlewareConfig \(type/m);
 });
 
 test('validate_code finds the mistakes of the old documentation', async () => {
@@ -131,6 +146,14 @@ test('validate_code accepts correct code, the example of the guide included', as
   for (const code of examples) {
     assert.match(await call('validate_code', { code }), /^No problems/, code);
   }
+
+  // An import list with comments in it
+  assert.match(
+    await call('validate_code', {
+      code: 'import {\n  RequestAPI as R, // the client\n  type IConfig,\n  /* a type */ ProcessData\n} from "@punica/request";'
+    }),
+    /^No problems/
+  );
 
   assert.match(
     await call('validate_code', {

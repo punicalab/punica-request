@@ -28,6 +28,25 @@ function declarationAt(source, index) {
   for (let i = index; i < source.length; i++) {
     const char = source[i];
 
+    // Comments and texts hold brackets and semicolons of their own
+    if (source.startsWith('/*', i)) {
+      i = source.indexOf('*/', i + 2) + 1 || source.length;
+      continue;
+    }
+
+    if (source.startsWith('//', i)) {
+      i = source.indexOf('\n', i);
+      if (i === -1) break;
+      continue;
+    }
+
+    if (char === "'" || char === '"' || char === '`') {
+      for (i++; i < source.length && source[i] !== char; i++) {
+        if (source[i] === '\\') i++;
+      }
+      continue;
+    }
+
     if ('({['.includes(char)) depth++;
     if (')}]'.includes(char)) depth--;
     if (depth === 0 && (char === ';' || char === '}')) {
@@ -38,8 +57,33 @@ function declarationAt(source, index) {
   return source.slice(index);
 }
 
+/**
+ * The declarations of a module that are not exported but that `text` names,
+ * such as the interface a configuration type is made of: without them the
+ * options of a middleware could not be looked up.
+ */
+function localsOf(source, text, seen = new Set()) {
+  const found = [];
+
+  for (const match of source.matchAll(/^(?:declare )?(?:interface|type) (\w+)/gm)) {
+    const name = match[1];
+
+    if (seen.has(name) || !new RegExp(`\\b${name}\\b`).test(text)) continue;
+    seen.add(name);
+
+    const declaration = [commentBefore(source, match.index), declarationAt(source, match.index)]
+      .filter(Boolean)
+      .join('\n');
+
+    found.push(declaration, ...localsOf(source, declaration, seen));
+  }
+
+  return found;
+}
+
 function entry(source, index, kind, name) {
   const comment = commentBefore(source, index);
+  const declaration = declarationAt(source, index);
   // The first line of text of the comment, without its stars
   const summary =
     comment
@@ -51,7 +95,9 @@ function entry(source, index, kind, name) {
     name,
     kind,
     summary: summary.trim(),
-    declaration: [comment, declarationAt(source, index)].filter(Boolean).join('\n')
+    declaration: [comment, declaration, ...localsOf(source, declaration, new Set([name]))]
+      .filter(Boolean)
+      .join('\n')
   };
 }
 

@@ -137,6 +137,78 @@ describe('the path of a request', () => {
     expect(adapter.calls).toEqual(['GET a']);
   });
 
+  test('an instance listed twice in a row is passed twice', async () => {
+    const adapter = new Recorder();
+    let passed = 0;
+
+    class Count extends BaseMiddleware {
+      public process(processData: ProcessData) {
+        passed++;
+        this.next(processData);
+      }
+    }
+
+    const count = new Count();
+    const api = new RequestAPI(adapter, {
+      hostname: 'https://host/',
+      requestMiddlewares: [count, count]
+    });
+
+    await api.get({ path: 'a' });
+
+    expect(passed).toBe(2);
+    expect(adapter.calls).toEqual(['GET a']);
+  });
+
+  test('a middleware another one hands the request to goes where it was told', async () => {
+    const adapter = new Recorder();
+
+    class Inner extends BaseMiddleware {
+      public process(processData: ProcessData) {
+        this.next(processData);
+      }
+    }
+
+    /** Hands every request to a middleware of its own, then goes on. */
+    class Outer extends BaseMiddleware {
+      #inner = new Inner();
+
+      public process(processData: ProcessData) {
+        this.#inner.nextMiddleware = {
+          process: (data: ProcessData) => this.next(data)
+        } as Inner;
+        this.#inner.process(processData);
+      }
+    }
+
+    const api = new RequestAPI(adapter, {
+      hostname: 'https://host/',
+      requestMiddlewares: [new Outer()]
+    });
+
+    expect((await api.get({ path: 'a' })).payload).toBe('GET');
+    expect(adapter.calls).toEqual(['GET a']);
+  });
+
+  test('a rejection of any kind of promise ends the request', async () => {
+    class Foreign extends BaseMiddleware {
+      // What a promise of another library or another realm looks like
+      public process(): any {
+        return {
+          then: (_done: unknown, failed: (reason: Error) => void) =>
+            failed(new Error('from elsewhere'))
+        };
+      }
+    }
+
+    const api = new RequestAPI(new Recorder(), {
+      hostname: 'https://host/',
+      requestMiddlewares: [new Foreign()]
+    });
+
+    await expect(api.get({ path: 'a' })).rejects.toThrow('from elsewhere');
+  });
+
   test('a middleware can send a request again, along its own path', async () => {
     const adapter = new Recorder();
 
