@@ -2,7 +2,7 @@ import { DATABASE_NAME, INDEX, OBJECT_STORE } from '../constants';
 
 class Singleton {
   private static instance: Singleton;
-  #database: IDBDatabase | null = null;
+  #opening: Promise<IDBDatabase> | null = null;
 
   // Private constructor prevents direct instantiation.
   private constructor() {}
@@ -21,31 +21,23 @@ class Singleton {
   }
 
   /**
-   * Asynchronously opens or creates the IndexedDB database and returns it.
-   * If the database is already opened, it returns the existing instance.
-   * @returns A Promise that resolves with the IDBDatabase instance.
+   * The database, opened once: everyone who asks while it is being opened
+   * gets the same one.
    */
   public getDatabase(): Promise<IDBDatabase> {
-    return new Promise((resolve, reject) => {
-      if (this.#database) {
-        resolve(this.#database);
-        return;
-      }
-
+    this.#opening ??= new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open(DATABASE_NAME, 1);
 
       request.onerror = () => {
-        reject();
+        this.#opening = null;
+        reject(request.error);
       };
 
-      request.onsuccess = (event: any) => {
-        const db = event.target.result;
-        this.#database = db;
-        resolve(this.#database);
-      };
+      // Fires once the store below exists, also the first time
+      request.onsuccess = () => resolve(request.result);
 
-      request.onupgradeneeded = (event: any) => {
-        const db = event.target.result;
+      request.onupgradeneeded = () => {
+        const db = request.result;
 
         if (!db.objectStoreNames.contains(OBJECT_STORE)) {
           const store = db.createObjectStore(OBJECT_STORE, {
@@ -55,12 +47,11 @@ class Singleton {
           store.createIndex(INDEX, INDEX, {
             unique: true
           });
-
-          this.#database = db;
-          resolve(this.#database);
         }
       };
     });
+
+    return this.#opening;
   }
 }
 

@@ -62,6 +62,7 @@ export const Middleware: MethodDecorator = (
           resolve,
           reject,
           notifier,
+          method: originalMethod.name.toUpperCase(),
           params: {
             ...params,
             requestURL,
@@ -86,6 +87,10 @@ export const Middleware: MethodDecorator = (
           current.nextMiddleware = null;
           return current;
         }, null);
+
+        // The request carries its own path: the instances above are shared
+        // with the requests that run at the same time
+        processData.chain = middlewareList;
 
         // Start processing with the head middleware
         headMiddleware.process(processData);

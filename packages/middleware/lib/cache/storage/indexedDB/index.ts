@@ -4,64 +4,52 @@ import { getOperation, insertOperation, deleteOperation } from './util';
 import { IStorage } from '../../model';
 
 /**
- * StorageIndexedDB is an implementation of the IStorage interface for IndexedDB storage.
- * It allows reading and writing data to the IndexedDB.
+ * Keeps responses in IndexedDB: across tabs and visits. It keeps whatever
+ * IndexedDB can copy, which includes blobs and array buffers.
  */
 export class StorageIndexedDB implements IStorage {
   /**
-   * Reads data from IndexedDB based on the provided request URL.
-   * @param requestURL - The URL for which data is to be read from IndexedDB.
+   * Reads data from IndexedDB.
+   * @param requestURL - The key under which the data is stored.
    * @returns A Promise that resolves to the stored data or null if not found.
    */
-  public read = (requestURL: string): Promise<any> => {
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise(async (resolve) => {
-      const db = await OperationDatabase.getDatabase();
-      const record = await getOperation(db, requestURL);
-      const { expireAt } = record;
+  public read = async (requestURL: string): Promise<any> => {
+    const db = await OperationDatabase.getDatabase();
+    const record = await getOperation(db, requestURL);
 
-      // Check if data has expired
-      if (expireAt && Date.now() > expireAt) {
-        deleteOperation(db, requestURL); // Remove expired data from storage
+    if (!record) return null;
 
-        resolve(null);
-      } else {
-        resolve(record);
-      }
-    });
+    if (record.expireAt && Date.now() > record.expireAt) {
+      await deleteOperation(db, requestURL); // Remove expired data from storage
+
+      return null;
+    }
+
+    return record.body;
   };
 
   /**
-   * Writes data to IndexedDB for the provided request URL.
-   * @param requestURL - The URL to be associated with the stored data.
-   * @param contentType - The content type of the data.
+   * Writes data to IndexedDB.
+   * @param requestURL - The key under which the data will be stored.
+   * @param contentType - The content type the payload was read as.
    * @param body - The data to be stored.
-   * @param expireTime - The expiration time for the data in milliseconds.
-   * @returns A Promise that resolves to true after the data is successfully stored.
+   * @param expireTime - The time after which the data should expire, in milliseconds.
+   * @returns A Promise that resolves to whether the data was stored.
    */
-  public write = (
+  public write = async (
     requestURL: string,
     contentType: ContentType,
     body: unknown,
     expireTime?: number
   ): Promise<boolean> => {
-    return new Promise((resolve) => {
-      let expirationTime: number = null;
+    const db = await OperationDatabase.getDatabase();
 
-      if (expireTime) {
-        expirationTime = Date.now() + expireTime;
-      }
-
-      OperationDatabase.getDatabase().then((db) => {
-        insertOperation(db, {
-          requestURL,
-          contentType,
-          body,
-          expireAt: expirationTime
-        });
-
-        resolve(true);
-      });
+    return insertOperation(db, {
+      url: requestURL,
+      requestURL,
+      contentType,
+      body,
+      expireAt: expireTime ? Date.now() + expireTime : null
     });
   };
 }

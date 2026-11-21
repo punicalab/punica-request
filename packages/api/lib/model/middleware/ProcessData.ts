@@ -2,6 +2,8 @@ import { Notifier } from '../../utils';
 import { IConfig } from '../config';
 import { RequestParams } from '../request';
 import { HttpResponse } from '..';
+import { RequestMethods } from '../constants';
+import { IMiddleware } from './IMiddleware';
 
 /**
  * Type representing the data to be processed by middleware.
@@ -80,6 +82,18 @@ export type ProcessData<T = any> = {
    * @type {(reason?: unknown) => void}
    */
   reject: (reason?: unknown) => void;
+
+  /**
+   * The method of the request.
+   */
+  method?: keyof RequestMethods;
+
+  /**
+   * The middlewares this request goes through, in their order: the request
+   * middlewares, the one that sends the request, the response middlewares.
+   * The instances are shared by every request of the API; the path is not.
+   */
+  chain?: IMiddleware[];
 
   /**
    * Additional properties that can be used as needed.

@@ -11,7 +11,8 @@ export const getCookie = (
   let result;
 
   // Use the provided cookie string or default to document.cookie
-  cookie = cookie || document.cookie;
+  // Outside a browser there is no cookie to find unless one is given
+  cookie = cookie || (typeof document === 'undefined' ? '' : document.cookie);
 
   // Use a regular expression to search for the cookie value
   // eslint-disable-next-line no-cond-assign

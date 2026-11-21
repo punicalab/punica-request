@@ -34,68 +34,61 @@ export class CancelRequestMiddleware extends BaseMiddleware {
   }
 
   /**
-   * Processes the incoming request data, managing request cancellation, timeouts, and ensuring only the latest request is kept.
-   * @param processData - The data to be processed.
+   * Gives the request a signal that cancels it: when the same request is
+   * sent again, when the timeout is over or when every request is cancelled.
+   * Requests are the same when their method and their address, with its
+   * query, are.
+   * @param processData - The request
    */
-  public process = async (processData: ProcessData) => {
-    const { config, params, notifier, reject } = processData;
-    const { hostname } = config;
-    const { path } = params;
-    const URL = `${hostname}${path || ''}`;
+  public process = (processData: ProcessData) => {
+    const { params, notifier, reject, method } = processData;
+    const key = `${method ?? ''} ${params.requestURL}`;
+
+    // The same request once more: the earlier one is not needed any more
+    this.#controllers.get(key)?.abort();
+
+    const controller = new AbortController();
+    const timer = this.#config.timeout
+      ? setTimeout(() => controller.abort(), this.#config.timeout)
+      : undefined;
+
+    /** The request is over: its timer and its entry go, a later one's stay. */
+    const finish = () => {
+      clearTimeout(timer);
+
+      if (this.#controllers.get(key) === controller) {
+        this.#controllers.delete(key);
+      }
+    };
+
+    this.#controllers.set(key, controller);
+
+    params.init = {
+      ...params.init,
+      signal: controller.signal
+    };
+
+    controller.signal.addEventListener('abort', () => {
+      finish();
+      reject(
+        new Error(
+          `Request to ${params.requestURL} was aborted due to timeout or cancellation.`
+        )
+      );
+    });
+
+    // Called once the response has arrived
+    const subscriber: Subscriber = {
+      key: 'cancel',
+      update: async () => finish()
+    };
+
+    notifier.addSubscriber(subscriber);
 
     try {
-      // If a request with the same URL is already in progress, abort the previous request
-      if (this.#controllers.has(URL)) {
-        const previousController = this.#controllers.get(URL);
-        previousController.abort();
-      }
-
-      // Create a new AbortController for the request
-      const controller = new AbortController();
-      this.#controllers.set(URL, controller);
-
-      // Set up timeout if configured
-      if (this.#config.timeout) {
-        setTimeout(() => {
-          controller.abort();
-        }, this.#config.timeout);
-      }
-
-      // Include the abort signal in the request init options
-      params.init = {
-        ...params.init,
-        signal: controller.signal
-      };
-
-      // Handle request abortion
-      controller.signal.addEventListener('abort', () => {
-        reject(
-          new Error(
-            `Request to ${URL} was aborted due to timeout or cancellation.`
-          )
-        );
-        this.#controllers.delete(URL);
-      });
-
-      // Define a subscriber to handle cleanup after the response is processed
-      const subscriber: Subscriber = {
-        key: 'cancel',
-        update: async () => {
-          return new Promise((resolve) => {
-            // After processing, remove the controller
-            this.#controllers.delete(URL);
-            resolve();
-          });
-        }
-      };
-      // Subscribe to updates to handle cleanup when the request is complete
-      notifier.addSubscriber(subscriber);
-
       this.next(processData);
     } catch (error) {
-      // Ensure controller is removed on error
-      this.#controllers.delete(URL);
-
+      finish();
       throw error;
     }
   };

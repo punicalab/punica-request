@@ -1,26 +1,25 @@
-import { OBJECT_STORE } from '../constants';
+import { INDEX, OBJECT_STORE } from '../constants';
 
 /**
- * Deletes a contact from the IndexedDB database.
- * @param db - The IndexedDB database instance.
- * @param id - The ID of the contact to be deleted.
- * @returns A Promise that resolves to true if the deletion is successful, or rejects if there's an error.
+ * Removes the record of an address.
+ * @param db - The database
+ * @param url - The address the record was stored for
  */
 export const deleteOperation = (
   db: IDBDatabase,
-  id: string
+  url: string
 ): Promise<boolean> => {
   return new Promise((resolve, reject) => {
     const txn = db.transaction(OBJECT_STORE, 'readwrite');
     const store = txn.objectStore(OBJECT_STORE);
-    const query = store.delete(id);
+    const existing = store.index(INDEX).getKey(url);
 
-    query.onerror = function () {
-      reject();
+    existing.onsuccess = () => {
+      if (existing.result !== undefined) store.delete(existing.result);
     };
 
-    txn.oncomplete = function () {
-      resolve(true);
-    };
+    txn.oncomplete = () => resolve(true);
+    txn.onerror = () => reject(txn.error);
+    txn.onabort = () => reject(txn.error);
   });
 };

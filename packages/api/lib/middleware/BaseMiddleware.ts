@@ -36,9 +36,7 @@ export abstract class BaseMiddleware implements IMiddleware {
    */
   constructor(
     config:
-      | MiddlewareActivityConfig
-      | MiddlewareMethodConfig
-      | MiddlewareConfig = {}
+      MiddlewareActivityConfig | MiddlewareMethodConfig | MiddlewareConfig = {}
   ) {
     this.#config = {
       getActive: (config as MiddlewareActivityConfig).getActive,
@@ -82,13 +80,29 @@ export abstract class BaseMiddleware implements IMiddleware {
    * @param data - Processed data
    */
   public next(data: ProcessData) {
-    if (this.#nextMiddleware) {
-      this.#nextMiddleware.process(data);
+    // The path of the request it belongs to. The instance is shared by every
+    // request of the API, so what follows it is not read from the instance:
+    // another request may have been set up since
+    const position = data.chain ? data.chain.indexOf(this) : -1;
+    const following =
+      position === -1 ? this.#nextMiddleware : data.chain[position + 1];
+
+    if (following) {
+      following.process(data);
 
       return;
     }
 
     data.resolve(data.httpResponse);
+  }
+
+  /**
+   * Sends the request again, from the first middleware of its path: after a
+   * token was refreshed, for example.
+   * @param data - The request
+   */
+  protected restart(data: ProcessData): void {
+    (data.chain?.[0] ?? this.#headMiddleware).process(data);
   }
 
   /**
