@@ -1,6 +1,6 @@
 {
   "name": "@punica/request-middleware",
-  "version": "2.6.5",
+  "version": "3.0.0-next.0",
   "description": "Request Middleware",
   "keywords": [
     "http",
