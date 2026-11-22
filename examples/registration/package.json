@@ -10,10 +10,10 @@
     "test": "npm run typecheck && npm run build && node dist/node.mjs"
   },
   "dependencies": {
-    "@punica/request": "next",
-    "@punica/request-fetch": "next",
-    "@punica/request-http": "next",
-    "@punica/request-middleware": "next"
+    "@punica/request": "^3.0.0",
+    "@punica/request-fetch": "^3.0.0",
+    "@punica/request-http": "^3.0.0",
+    "@punica/request-middleware": "^3.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
