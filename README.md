@@ -6,130 +6,124 @@ or Node's `http`.
 
 Documentation: [request.punicalab.com](https://request.punicalab.com)
 
-| Package                                                                                  |                                                                   |
-| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| [`@punica/request`](https://www.npmjs.com/package/@punica/request)                       | `RequestAPI`, the middleware base class, the types                |
-| [`@punica/request-fetch`](https://www.npmjs.com/package/@punica/request-fetch)           | `APIFetch`, the adapter for `fetch`                               |
-| [`@punica/request-http`](https://www.npmjs.com/package/@punica/request-http)             | `APIHttp`, an adapter for Node's `http`                           |
-| [`@punica/request-middleware`](https://www.npmjs.com/package/@punica/request-middleware) | Token, cookie, error, refresh-token, cancel and cache middlewares |
-| [`@punica/request-mcp`](https://www.npmjs.com/package/@punica/request-mcp)               | An MCP server that gives an AI assistant the real API             |
+| Package                                                                                  |                                                                     |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| [`@punica/request`](https://www.npmjs.com/package/@punica/request)                       | `createClient`, the errors, the types                               |
+| [`@punica/request-fetch`](https://www.npmjs.com/package/@punica/request-fetch)           | `fetchAdapter`: browsers, Node 18+, workers                         |
+| [`@punica/request-http`](https://www.npmjs.com/package/@punica/request-http)             | `httpAdapter`: Node's `http` / `https`, for agents and certificates |
+| [`@punica/request-middleware`](https://www.npmjs.com/package/@punica/request-middleware) | Token, cookie, error, refresh-token, cancel and cache middlewares   |
+| [`@punica/request-mcp`](https://www.npmjs.com/package/@punica/request-mcp)               | An MCP server that gives an AI assistant the real API               |
 
 ```bash
 npm install @punica/request @punica/request-fetch @punica/request-middleware
 ```
 
+This is version 3. Coming from 2.x? See the
+[migration guide](https://request.punicalab.com/docs/migration).
+
 ## A request
 
 ```ts
-import { RequestAPI, type IConfig } from '@punica/request';
-import { APIFetch } from '@punica/request-fetch';
+import { createClient, isHttpError } from '@punica/request';
+import { fetchAdapter } from '@punica/request-fetch';
 
-const config: IConfig = {
-  // Joined with the path as it is: end it with a slash
-  hostname: 'https://api.example.com/',
-  requestInit: { headers: { Accept: 'application/json' } }
-};
-
-const api = new RequestAPI(new APIFetch(), config);
+const api = createClient({
+  baseURL: 'https://api.example.com/v1',
+  adapter: fetchAdapter(),
+  headers: { Accept: 'application/json' },
+  timeout: 10_000
+});
 
 type Item = { id: number; name: string };
 
-const { payload, status } = await api.get<never, Item[]>({
-  path: 'items',
-  query: { page: '2' },
-  // How the body of the response is read: 'json', 'text', 'blob', 'arrayBuffer' or 'formData'
-  contentType: 'json'
+const { data, status, headers } = await api.get<Item[]>('items', {
+  // null and undefined are left out, an array repeats its name
+  query: { page: 2, tags: ['a', 'b'] }
 });
 
-await api.post<string, Item>({
-  path: 'items',
-  // The body is sent as it is given: serialize it yourself
-  data: JSON.stringify({ name: 'Paper' }),
-  contentType: 'json',
-  init: { headers: { 'Content-Type': 'application/json' } }
-});
-```
-
-`get`, `delete`, `post`, `put` and `patch` resolve with
-`{ payload, status, response }`.
-
-**A response that is not 2xx resolves too**, with its status and no payload.
-Add an `ErrorMiddleware` to have such requests reject. A request that cannot
-be sent at all (no network, cancelled) rejects.
-
-## Middlewares
-
-A request goes through `requestMiddlewares`, is sent, and its response goes
-through `responseMiddlewares`, each in the order of its list.
-
-```ts
-import {
-  CacheMiddleware,
-  CancelRequestMiddleware,
-  ErrorMiddleware,
-  RefreshTokenMiddleware,
-  StorageSession,
-  TokenAuthMiddleware
-} from '@punica/request-middleware';
-
-const config: IConfig = {
-  hostname: 'https://api.example.com/',
-  requestMiddlewares: [
-    new TokenAuthMiddleware({
-      cookieName: 'token',
-      headerName: 'Authorization'
-    }),
-    new CancelRequestMiddleware({ timeout: 10_000 }),
-    new CacheMiddleware({ storage: new StorageSession() })
-  ],
-  responseMiddlewares: [
-    // Before the error middleware: it sends a request that got a 401 again
-    new RefreshTokenMiddleware({
-      tokenProvider: { refreshToken: () => session.refresh() }
-    }),
-    new ErrorMiddleware({
-      contentType: 'json',
-      error: {
-        401: async () => router.go('/login'),
-        500: async ({ body }) => notify(body.message)
-      }
-    })
-  ]
-};
-```
-
-| Middleware                | List     | What it does                                                                                                                                                  |
-| ------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TokenAuthMiddleware`     | request  | Puts a token from a cookie into a header (`Bearer ${token}` by default)                                                                                       |
-| `CookieMiddleware`        | request  | Copies the value of a cookie into a header                                                                                                                    |
-| `CancelRequestMiddleware` | request  | Cancels a request when one with the same method and path is sent again, or a timeout is over; `getKey` changes what counts as the same; `cancelAllRequests()` |
-| `CacheMiddleware`         | request  | Answers a `GET` that has `cache: {}` from a storage (`StorageSession`, `StorageIndexedDB`)                                                                    |
-| `RefreshTokenMiddleware`  | response | On a 401, refreshes the token once and sends the request again, once                                                                                          |
-| `ErrorMiddleware`         | response | Rejects a response that is not 2xx, after calling the handler of its status                                                                                   |
-
-Every middleware takes `getActive` and `getAvailableMethods` to switch it off
-or limit it to some methods.
-
-### Your own
-
-```ts
-import { BaseMiddleware, type ProcessData } from '@punica/request';
-
-class TraceMiddleware extends BaseMiddleware {
-  public process(processData: ProcessData): void {
-    processData.params.init.headers = {
-      ...processData.params.init.headers,
-      'X-Trace': crypto.randomUUID()
-    };
-
-    // Pass the request on; without this call it ends here
-    this.next(processData);
+try {
+  await api.post<Item>('items', { json: { name: 'Paper' } });
+} catch (error) {
+  if (isHttpError<{ message: string }>(error)) {
+    console.log(error.status, error.response.data.message);
   }
 }
 ```
 
-A middleware ends a request by calling `processData.resolve(response)` or
-`processData.reject(error)` instead of `next`.
+`get`, `post`, `put`, `patch`, `delete` and `head` resolve with
+`{ ok, status, headers, data, raw }`. The body is read by the `Content-Type`
+of the response; `responseType` decides when it has to.
+
+**A response outside 2xx rejects** with an `HttpError` that carries the
+response. A request that brought no response rejects with a `RequestError`
+whose `reason` is `network`, `timeout`, `abort` or `parse`.
+`throwHttpErrors: false` gives the response back whatever its status.
+
+## Middlewares
+
+One list. A request passes it from the first to the last, is sent, and its
+response passes it back from the last to the first.
+
+```ts
+import { createClient, when } from '@punica/request';
+import { fetchAdapter } from '@punica/request-fetch';
+import {
+  cache,
+  cancel,
+  onError,
+  refreshToken,
+  tokenAuth,
+  StorageSession
+} from '@punica/request-middleware';
+
+const api = createClient({
+  baseURL: 'https://api.example.com/v1',
+  adapter: fetchAdapter(),
+  middlewares: [
+    onError({
+      401: () => router.go('/login'),
+      500: (response) => notify(response.data.message)
+    }),
+    // Before tokenAuth: the request it sends again takes the new token
+    refreshToken({ refresh: () => session.refresh() }),
+    tokenAuth({ cookieName: 'token' }),
+    cache({ storage: new StorageSession() }),
+    when((context) => context.method === 'GET', cancel())
+  ]
+});
+
+await api.get('countries', { cache: { ttl: 60_000 } });
+```
+
+| Middleware     | What it does                                                                                                      |
+| -------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `tokenAuth`    | Sends a token, from a cookie or from `getToken` (`Bearer ${token}` in `Authorization` by default)                 |
+| `cookie`       | Sends the value of a cookie in a header                                                                           |
+| `cancel`       | Cancels a request when the same one is sent again; `getKey` says what the same is; `cancelAll()`                  |
+| `cache`        | Answers a `GET` made with `cache: true` or `cache: { ttl }` from a storage (`StorageSession`, `StorageIndexedDB`) |
+| `refreshToken` | On a 401, refreshes the token once for all requests that failed and sends each again, once                        |
+| `onError`      | Calls the handler of the status of a response outside 2xx; the request still rejects                              |
+| `when`         | From the core: limits a middleware to some requests                                                               |
+
+### Your own
+
+```ts
+import type { Middleware } from '@punica/request';
+
+const trace: Middleware = async (context, next) => {
+  context.headers.set('X-Trace', crypto.randomUUID());
+
+  const response = await next();
+
+  console.log(context.method, context.url.pathname, response.status);
+
+  return response;
+};
+```
+
+A middleware ends a request by returning a response or by throwing. What it
+does before `await next()` happens on the way out, what it does after on the
+way back; calling `next()` again sends the request again.
 
 ## AI assistants
 

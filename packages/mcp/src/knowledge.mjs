@@ -16,7 +16,9 @@ function resolve(files, from, specifier) {
 
 /** The JSDoc comment that ends right before `index`, if there is one. */
 function commentBefore(source, index) {
-  const match = /\/\*\*(?:(?!\*\/)[\s\S])*\*\/\s*$/.exec(source.slice(0, index));
+  const match = /\/\*\*(?:(?!\*\/)[\s\S])*\*\/\s*$/.exec(
+    source.slice(0, index)
+  );
 
   return match ? match[0].trimEnd() : '';
 }
@@ -65,13 +67,18 @@ function declarationAt(source, index) {
 function localsOf(source, text, seen = new Set()) {
   const found = [];
 
-  for (const match of source.matchAll(/^(?:declare )?(?:interface|type) (\w+)/gm)) {
+  for (const match of source.matchAll(
+    /^(?:declare )?(?:interface|type) (\w+)/gm
+  )) {
     const name = match[1];
 
     if (seen.has(name) || !new RegExp(`\\b${name}\\b`).test(text)) continue;
     seen.add(name);
 
-    const declaration = [commentBefore(source, match.index), declarationAt(source, match.index)]
+    const declaration = [
+      commentBefore(source, match.index),
+      declarationAt(source, match.index)
+    ]
       .filter(Boolean)
       .join('\n');
 
@@ -84,18 +91,37 @@ function localsOf(source, text, seen = new Set()) {
 function entry(source, index, kind, name) {
   const comment = commentBefore(source, index);
   const declaration = declarationAt(source, index);
-  // The first line of text of the comment, without its stars
-  const summary =
-    comment
-      .split('\n')
-      .map((line) => line.replace(/^\s*\/?\*+\/?\s?/, '').trim())
-      .find((line) => line && !line.startsWith('@')) || '';
+  // The first paragraph of the comment, without its stars, up to the end of
+  // its first sentence
+  const lines = comment
+    .replace(/^\s*\/\*+/, '')
+    .replace(/\*+\/\s*$/, '')
+    .split('\n')
+    .map((line) => line.replace(/^\s*\*+\s?/, '').trim());
+  const start = lines.findIndex((line) => line && !line.startsWith('@'));
+  const paragraph = [];
+
+  for (let i = start; i >= 0 && i < lines.length; i++) {
+    if (!lines[i] || lines[i].startsWith('@') || lines[i].startsWith('```'))
+      break;
+    paragraph.push(lines[i]);
+  }
+
+  const text = paragraph.join(' ');
+  const summary = (/^.*?[.:](?=\s|$)/.exec(text)?.[0] ?? text).replace(
+    /:$/,
+    '.'
+  );
 
   return {
     name,
     kind,
     summary: summary.trim(),
-    declaration: [comment, declaration, ...localsOf(source, declaration, new Set([name]))]
+    declaration: [
+      comment,
+      declaration,
+      ...localsOf(source, declaration, new Set([name]))
+    ]
       .filter(Boolean)
       .join('\n')
   };
@@ -114,14 +140,18 @@ function exportsOf(files, path, seen = new Set()) {
   }
 
   // export * from './x';  export type * from './x';
-  for (const match of source.matchAll(/^export (?:type )?\* from ['"](.+?)['"];/gm)) {
+  for (const match of source.matchAll(
+    /^export (?:type )?\* from ['"](.+?)['"];/gm
+  )) {
     const target = exportsOf(files, resolve(files, path, match[1]), seen);
 
     for (const [name, value] of target) found.set(name, value);
   }
 
   // export { a, default as b } from './x';  export type { a } from './x';
-  for (const match of source.matchAll(/^export (?:type )?\{([^}]+)\} from ['"](.+?)['"];/gm)) {
+  for (const match of source.matchAll(
+    /^export (?:type )?\{([^}]+)\} from ['"](.+?)['"];/gm
+  )) {
     const targetPath = resolve(files, path, match[2]);
     const target = exportsOf(files, targetPath, new Set(seen));
     const targetSource = files.get(targetPath) || '';
@@ -138,7 +168,8 @@ function exportsOf(files, path, seen = new Set()) {
           'm'
         ).exec(targetSource);
 
-        value = declared && entry(targetSource, declared.index, declared[1], alias);
+        value =
+          declared && entry(targetSource, declared.index, declared[1], alias);
       }
 
       if (value) found.set(alias, { ...value, name: alias });

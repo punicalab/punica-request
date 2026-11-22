@@ -1,254 +1,405 @@
-import { HttpResponse, RequestAPI } from '@punica/request';
-import { CancelRequestMiddleware, RefreshTokenMiddleware } from '..';
-import { Recorder } from './support';
+import { createClient, isRequestError } from '@punica/request';
+import type { Adapter } from '@punica/request';
+import { cancel, refreshToken } from '..';
+import { deferred, json, settled } from './support';
 
-/** Answers when the test says so, and fails when its request is aborted. */
-const createSlow = () => {
-  const open: Array<(response: HttpResponse) => void> = [];
-  const adapter = new Recorder(
-    (_method, params) =>
-      new Promise<HttpResponse>((resolve, reject) => {
-        open.push(resolve);
-        params.init?.signal?.addEventListener('abort', () =>
-          reject(new DOMException('The operation was aborted.', 'AbortError'))
-        );
-      })
-  );
-  const answer = (index: number) =>
-    open[index]({ status: 200, response: null, payload: index });
+const baseURL = 'https://api.example.com';
 
-  return { adapter, answer };
+/** An adapter whose requests are answered by the test, or by their abort. */
+const manual = () => {
+  const requests: Array<{
+    url: string;
+    method: string;
+    signal: AbortSignal;
+    answer: (response: Response) => void;
+  }> = [];
+  const adapter: Adapter = (context) => {
+    const { promise, resolve, reject } = deferred<Response>();
+
+    context.signal.addEventListener('abort', () =>
+      reject(new DOMException('Aborted', 'AbortError'))
+    );
+    requests.push({
+      url: context.url.href,
+      method: context.method,
+      signal: context.signal,
+      answer: resolve
+    });
+
+    return promise;
+  };
+
+  return { adapter, requests };
 };
 
-const tick = () => new Promise((resolve) => setImmediate(resolve));
+const reasonOf = (promise: Promise<unknown>) =>
+  promise.then(
+    () => 'answered',
+    (error) => (isRequestError(error) ? error.reason : error)
+  );
 
-describe('CancelRequestMiddleware', () => {
-  const unhandled = jest.fn();
-
-  beforeAll(() => process.on('unhandledRejection', unhandled));
-  afterAll(() => process.off('unhandledRejection', unhandled));
-  beforeEach(() => unhandled.mockClear());
-
+describe('cancel', () => {
   test('the same request sent again cancels the one before it', async () => {
-    const { adapter, answer } = createSlow();
-    const api = new RequestAPI(adapter, {
-      hostname: 'https://host/',
-      requestMiddlewares: [new CancelRequestMiddleware()]
-    });
-    const first = api.get({ path: 'items' });
-    const failed = expect(first).rejects.toThrow('aborted');
-    const second = api.get({ path: 'items' });
+    const { adapter, requests } = manual();
+    const api = createClient({ baseURL, adapter, middlewares: [cancel()] });
+    const first = reasonOf(api.get('search'));
 
-    await tick();
-    answer(1);
+    await settled();
 
-    await failed;
-    expect((await second).payload).toBe(1);
+    const second = reasonOf(api.get('search'));
 
-    await tick();
-    expect(unhandled).not.toHaveBeenCalled();
+    await settled();
+    requests[1].answer(json({}));
+
+    expect(await first).toBe('abort');
+    expect(await second).toBe('answered');
+    expect(requests[0].signal.aborted).toBe(true);
+    expect(requests[1].signal.aborted).toBe(false);
   });
 
   test('a new query to the same path cancels the one before it, another method does not', async () => {
-    const { adapter, answer } = createSlow();
-    const api = new RequestAPI(adapter, {
-      hostname: 'https://host/',
-      requestMiddlewares: [new CancelRequestMiddleware()]
-    });
-    // What a search field sends while the user types
-    const stale = expect(
-      api.get({ path: 'search', query: { q: 'a' } })
-    ).rejects.toThrow('aborted');
-    const current = api.get({ path: 'search', query: { q: 'ab' } });
-    const saved = api.post({ path: 'search' });
+    const { adapter, requests } = manual();
+    const api = createClient({ baseURL, adapter, middlewares: [cancel()] });
+    const first = reasonOf(api.get('search', { query: { q: 'a' } }));
+    const post = reasonOf(api.post('search'));
 
-    await tick();
-    answer(1);
-    answer(2);
+    await settled();
 
-    await stale;
-    expect((await current).payload).toBe(1);
-    expect((await saved).payload).toBe(2);
+    const second = reasonOf(api.get('search', { query: { q: 'ab' } }));
+
+    await settled();
+    requests.forEach((request) => request.answer(json({})));
+
+    expect(await first).toBe('abort');
+    expect(await post).toBe('answered');
+    expect(await second).toBe('answered');
   });
 
   test('getKey says which requests are the same one', async () => {
-    const { adapter, answer } = createSlow();
-    const api = new RequestAPI(adapter, {
-      hostname: 'https://host/',
-      requestMiddlewares: [
-        new CancelRequestMiddleware({
-          getKey: ({ params }) => params.requestURL
-        })
+    const { adapter, requests } = manual();
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [
+        cancel({ getKey: (context) => `${context.method} ${context.url.href}` })
       ]
     });
-    const pages = [
-      api.get({ path: 'items', query: { page: '1' } }),
-      api.get({ path: 'items', query: { page: '2' } })
-    ];
+    const a = reasonOf(api.get('search', { query: { q: 'a' } }));
+    const b = reasonOf(api.get('search', { query: { q: 'b' } }));
 
-    await tick();
-    [0, 1].forEach(answer);
+    await settled();
 
-    expect((await Promise.all(pages)).map(({ payload }) => payload)).toEqual([
-      0, 1
-    ]);
+    const again = reasonOf(api.get('search', { query: { q: 'a' } }));
+
+    await settled();
+    requests.forEach((request) => request.answer(json({})));
+
+    expect(await a).toBe('abort');
+    expect(await b).toBe('answered');
+    expect(await again).toBe('answered');
   });
 
   test('the signal the caller gave the request still cancels it', async () => {
-    const { adapter } = createSlow();
-    const api = new RequestAPI(adapter, {
-      hostname: 'https://host/',
-      requestMiddlewares: [new CancelRequestMiddleware()]
-    });
-    const own = new AbortController();
-    const request = expect(
-      api.get({ path: 'report', init: { signal: own.signal } })
-    ).rejects.toThrow('aborted');
+    const { adapter, requests } = manual();
+    const api = createClient({ baseURL, adapter, middlewares: [cancel()] });
+    const controller = new AbortController();
+    const pending = reasonOf(api.get('search', { signal: controller.signal }));
 
-    await tick();
-    own.abort();
-    await request;
+    await settled();
+    controller.abort();
 
-    // And one that was aborted before the request was sent
-    await expect(
-      api.get({ path: 'report', init: { signal: own.signal } })
-    ).rejects.toThrow('aborted');
-    expect(adapter.calls).toHaveLength(1);
+    expect(await pending).toBe('abort');
+    expect(requests[0].signal.aborted).toBe(true);
   });
 
   test('a request that is sent again after a token refresh is not cancelled by itself', async () => {
-    let valid = false;
-    const adapter = new Recorder(() =>
-      valid
-        ? { status: 200, response: null, payload: 'ok' }
-        : { status: 401, response: null }
-    );
-    const api = new RequestAPI(adapter, {
-      hostname: 'https://host/',
-      requestMiddlewares: [new CancelRequestMiddleware({ timeout: 10_000 })],
-      responseMiddlewares: [
-        new RefreshTokenMiddleware({
-          tokenProvider: { refreshToken: async () => (valid = true) }
-        })
+    const { adapter, requests } = manual();
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [refreshToken({ refresh: async () => true }), cancel()]
+    });
+    const pending = api.get<{ ok: number }>('items');
+
+    await settled();
+    requests[0].answer(json({}, 401));
+    await settled();
+
+    expect(requests).toHaveLength(2);
+    expect(requests[1].signal.aborted).toBe(false);
+
+    requests[1].answer(json({ ok: 1 }));
+
+    expect((await pending).data).toEqual({ ok: 1 });
+  });
+
+  test('a request that waits for a token does not cancel a later one when it is sent again', async () => {
+    const { adapter, requests } = manual();
+    const refreshed = deferred<boolean>();
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [
+        refreshToken({ refresh: () => refreshed.promise }),
+        cancel()
       ]
     });
-    const response = await api.get({ path: 'a' });
+    const older = reasonOf(api.get('search', { query: { q: 'old' } }));
 
-    expect(response.payload).toBe('ok');
-    expect(adapter.calls).toHaveLength(2);
+    await settled();
+    requests[0].answer(json({}, 401));
+    await settled();
+
+    // Sent while the older one waits for the token
+    const newer = reasonOf(api.get('search', { query: { q: 'new' } }));
+
+    await settled();
+    refreshed.resolve(true);
+    await settled();
+
+    // The older one gives way instead of taking the place back
+    expect(await older).toBe('abort');
+    expect(requests).toHaveLength(2);
+    expect(requests[1].signal.aborted).toBe(false);
+
+    requests[1].answer(json({}));
+
+    expect(await newer).toBe('answered');
+  });
+
+  test('a request that waits for a token gives way to a later one that was answered already', async () => {
+    const { adapter, requests } = manual();
+    const refreshed = deferred<boolean>();
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [
+        refreshToken({ refresh: () => refreshed.promise }),
+        cancel()
+      ]
+    });
+    const older = reasonOf(api.get('search', { query: { q: 'a' } }));
+
+    await settled();
+    requests[0].answer(json({}, 401));
+    await settled();
+
+    const newer = reasonOf(api.get('search', { query: { q: 'b' } }));
+
+    await settled();
+    requests[1].answer(json({}));
+
+    expect(await newer).toBe('answered');
+
+    refreshed.resolve(true);
+
+    // Not sent again: its answer would arrive after the newer one
+    expect(await older).toBe('abort');
+    expect(requests).toHaveLength(2);
+  });
+
+  test('cancelAll also cancels a request that waits to be sent again', async () => {
+    const { adapter, requests } = manual();
+    const refreshed = deferred<boolean>();
+    const latest = cancel();
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [refreshToken({ refresh: () => refreshed.promise }), latest]
+    });
+    const waiting = reasonOf(api.get('items'));
+
+    await settled();
+    requests[0].answer(json({}, 401));
+    await settled();
+    latest.cancelAll();
+    refreshed.resolve(true);
+
+    expect(await waiting).toBe('abort');
+    expect(requests).toHaveLength(1);
+
+    // A request made after it is not touched
+    const next = reasonOf(api.get('items'));
+
+    await settled();
+    requests[1].answer(json({}));
+
+    expect(await next).toBe('answered');
+  });
+
+  test('remembers the latest request of a key without growing for ever', async () => {
+    const { adapter, requests } = manual();
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [cancel({ getKey: (context) => context.url.href })]
+    });
+
+    for (let i = 0; i < 1100; i++) {
+      const pending = reasonOf(api.get(`items/${i}`));
+
+      await Promise.resolve();
+      await Promise.resolve();
+      requests[i].answer(json({}));
+
+      expect(await pending).toBe('answered');
+    }
+
+    // The first key was forgotten, and works as on the first day
+    const again = reasonOf(api.get('items/0'));
+
+    await settled();
+    requests[1100].answer(json({}));
+
+    expect(await again).toBe('answered');
+  });
+
+  test('a request cancelled while it waits for a token cancels nothing when the token comes', async () => {
+    const { adapter, requests } = manual();
+    const refreshed = deferred<boolean>();
+    const controller = new AbortController();
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [
+        refreshToken({ refresh: () => refreshed.promise }),
+        cancel()
+      ]
+    });
+    const dead = reasonOf(api.get('search', { signal: controller.signal }));
+
+    await settled();
+    requests[0].answer(json({}, 401));
+    await settled();
+    controller.abort();
+
+    expect(await dead).toBe('abort');
+
+    const live = reasonOf(api.get('search'));
+
+    await settled();
+    refreshed.resolve(true);
+    await settled();
+
+    expect(requests).toHaveLength(2);
+    expect(requests[1].signal.aborted).toBe(false);
+
+    requests[1].answer(json({}));
+
+    expect(await live).toBe('answered');
   });
 
   test('a request whose caller cancelled it before it was sent cancels nothing else', async () => {
-    const { adapter, answer } = createSlow();
-    const api = new RequestAPI(adapter, {
-      hostname: 'https://host/',
-      requestMiddlewares: [new CancelRequestMiddleware()]
-    });
-    const running = api.get({ path: 'items' });
-    const gone = new AbortController();
+    const { adapter, requests } = manual();
+    const api = createClient({ baseURL, adapter, middlewares: [cancel()] });
+    const first = reasonOf(api.get('search'));
 
-    gone.abort();
-    await tick();
-    await expect(
-      api.get({ path: 'items', init: { signal: gone.signal } })
-    ).rejects.toThrow('aborted');
+    await settled();
 
-    answer(0);
-    expect((await running).payload).toBe(0);
+    const dead = reasonOf(api.get('search', { signal: AbortSignal.abort() }));
+
+    expect(await dead).toBe('abort');
+
+    requests[0].answer(json({}));
+
+    expect(await first).toBe('answered');
+    expect(requests).toHaveLength(1);
   });
 
-  test('a signal shared by many requests keeps nothing of the ones that ended', async () => {
-    const api = new RequestAPI(new Recorder(), {
-      hostname: 'https://host/',
-      requestMiddlewares: [new CancelRequestMiddleware()]
+  test('keeps nothing of the requests that ended, however they ended', async () => {
+    const { adapter, requests } = manual();
+    const latest = cancel();
+    const cancelled: string[] = [];
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [
+        (context, next) => {
+          context.signal.addEventListener('abort', () =>
+            cancelled.push(context.url.pathname)
+          );
+
+          return next();
+        },
+        latest
+      ]
     });
-    const shared = new AbortController();
-    const added = jest.spyOn(shared.signal, 'addEventListener');
-    const removed = jest.spyOn(shared.signal, 'removeEventListener');
+    const ok = reasonOf(api.get('a'));
+    const failed = reasonOf(api.get('b'));
 
-    await api.get({ path: 'a', init: { signal: shared.signal } });
-    await api.get({ path: 'b', init: { signal: shared.signal } });
+    await settled();
+    requests[0].answer(json({}));
+    requests[1].answer(json({}, 500));
 
-    expect(added).toHaveBeenCalledTimes(2);
-    expect(removed).toHaveBeenCalledTimes(2);
+    expect(await ok).toBe('answered');
+    expect((await failed).status).toBe(500);
+
+    // Nothing is left to cancel
+    latest.cancelAll();
+
+    expect(cancelled).toEqual([]);
   });
 
-  test('a request that ends without a response leaves no timer behind', async () => {
+  test('a request that was answered is not cancelled by a later one', async () => {
+    const { adapter, requests } = manual();
+    const api = createClient({ baseURL, adapter, middlewares: [cancel()] });
+    const first = api.get('search');
+
+    await settled();
+    requests[0].answer(json({ id: 1 }));
+
+    expect((await first).data).toEqual({ id: 1 });
+
+    const second = reasonOf(api.get('search'));
+
+    await settled();
+    requests[1].answer(json({}));
+
+    expect(await second).toBe('answered');
+    expect(requests[0].signal.aborted).toBe(false);
+  });
+
+  test('the timeout of the client still ends a request', async () => {
     jest.useFakeTimers();
 
     try {
-      const adapter = new Recorder(() => {
-        throw new TypeError('Failed to fetch');
+      const { adapter } = manual();
+      const api = createClient({
+        baseURL,
+        adapter,
+        timeout: 100,
+        middlewares: [cancel()]
       });
-      const api = new RequestAPI(adapter, {
-        hostname: 'https://host/',
-        requestMiddlewares: [new CancelRequestMiddleware({ timeout: 10_000 })]
-      });
+      const pending = reasonOf(api.get('slow'));
 
-      await expect(api.get({ path: 'a' })).rejects.toThrow('Failed to fetch');
-      expect(jest.getTimerCount()).toBe(0);
+      await jest.advanceTimersByTimeAsync(100);
+
+      expect(await pending).toBe('timeout');
     } finally {
       jest.useRealTimers();
     }
   });
 
-  test('a request that takes longer than the timeout is cancelled', async () => {
-    const { adapter } = createSlow();
-    const api = new RequestAPI(adapter, {
-      hostname: 'https://host/',
-      requestMiddlewares: [new CancelRequestMiddleware({ timeout: 20 })]
-    });
+  test('cancelAll cancels what is under way', async () => {
+    const { adapter, requests } = manual();
+    const latest = cancel();
+    const api = createClient({ baseURL, adapter, middlewares: [latest] });
+    const a = reasonOf(api.get('a'));
+    const b = reasonOf(api.post('b'));
 
-    await expect(api.get({ path: 'slow' })).rejects.toThrow('aborted');
-  });
+    await settled();
+    latest.cancelAll();
 
-  test('the timeout of a request that was answered does not touch a later one', async () => {
-    jest.useFakeTimers();
+    expect(await a).toBe('abort');
+    expect(await b).toBe('abort');
+    expect(requests.every((request) => request.signal.aborted)).toBe(true);
 
-    try {
-      const { adapter, answer } = createSlow();
-      const cancel = new CancelRequestMiddleware({ timeout: 100 });
-      const api = new RequestAPI(adapter, {
-        hostname: 'https://host/',
-        requestMiddlewares: [cancel]
-      });
-      const first = api.get({ path: 'items' });
+    // And the client goes on working
+    const next = reasonOf(api.get('a'));
 
-      await jest.advanceTimersByTimeAsync(10);
-      answer(0);
-      expect((await first).payload).toBe(0);
+    await settled();
+    requests[2].answer(json({}));
 
-      // Sent 60 ms later: the timeout of the first request is due at 100
-      await jest.advanceTimersByTimeAsync(60);
-
-      const second = api.get({ path: 'items' });
-      const outcome = second.then(
-        ({ payload }) => payload,
-        (error) => error.message
-      );
-
-      await jest.advanceTimersByTimeAsync(50);
-      answer(1);
-
-      expect(await outcome).toBe(1);
-    } finally {
-      jest.useRealTimers();
-    }
-  });
-
-  test('cancelAllRequests cancels what is under way', async () => {
-    const { adapter } = createSlow();
-    const cancel = new CancelRequestMiddleware();
-    const api = new RequestAPI(adapter, {
-      hostname: 'https://host/',
-      requestMiddlewares: [cancel]
-    });
-    const requests = [api.get({ path: 'a' }), api.get({ path: 'b' })].map(
-      (request) => expect(request).rejects.toThrow('aborted')
-    );
-
-    await tick();
-    cancel.cancelAllRequests();
-    await Promise.all(requests);
+    expect(await next).toBe('answered');
   });
 });

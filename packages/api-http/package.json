@@ -45,7 +45,10 @@
     "clean": "rimraf dist",
     "lint": "eslint lib"
   },
-  "dependencies": {
+  "peerDependencies": {
+    "@punica/request": "workspace:^"
+  },
+  "devDependencies": {
     "@punica/request": "workspace:^"
   }
 }
