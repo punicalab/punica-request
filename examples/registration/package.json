@@ -1,0 +1,23 @@
+{
+  "name": "punica-request-example-registration",
+  "private": true,
+  "type": "module",
+  "description": "A small application on the published packages: a client with its middlewares, operations, and scenarios that run in a browser and in Node.",
+  "scripts": {
+    "build": "esbuild src/browser.ts --bundle --format=esm --target=es2022 --outfile=public/app.js && esbuild src/node.ts --bundle --format=esm --platform=node --target=node18 --external:../server.mjs --outfile=dist/node.mjs",
+    "typecheck": "tsc --noEmit",
+    "start": "npm run build && node server.mjs",
+    "test": "npm run typecheck && npm run build && node dist/node.mjs"
+  },
+  "dependencies": {
+    "@punica/request": "next",
+    "@punica/request-fetch": "next",
+    "@punica/request-http": "next",
+    "@punica/request-middleware": "next"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.3"
+  }
+}
