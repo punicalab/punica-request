@@ -137,6 +137,12 @@ claude mcp add punica-request -- npx -y @punica/request-mcp
 
 See [its README](./packages/mcp/README.md) for other clients and the tools.
 
+## An example
+
+[`examples/registration`](./examples/registration) is a small application on
+the published packages: a client with its middlewares, and what an
+application does with it, running in a browser and in Node.
+
 ## Development
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md).
