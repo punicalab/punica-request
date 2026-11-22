@@ -45,12 +45,7 @@ export interface Environment {
 const acceptLanguage =
   (language: () => string): Middleware =>
   (context, next) => {
-    if (
-      !context.options.headers ||
-      !new Headers(context.options.headers as HeadersInit).has(
-        'Accept-Language'
-      )
-    ) {
+    if (!context.requestHeaders.has('Accept-Language')) {
       context.headers.set('Accept-Language', language());
     }
 

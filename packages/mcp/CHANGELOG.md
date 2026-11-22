@@ -1,5 +1,25 @@
 # @punica/request-mcp
 
+## 0.2.0
+
+### Minor Changes
+
+- [#95](https://github.com/punicalab/punica-request/pull/95) [`b32bab2`](https://github.com/punicalab/punica-request/commit/b32bab23bb94c5f8a9c68a2bfc2f4bb23700aab2) Thanks [@punicalab](https://github.com/punicalab)! - `context.requestHeaders`: the headers a request itself gave, without those of the client. A middleware that sets a header unless the request names its own no longer has to read `context.options.headers` in its three shapes:
+  
+  ```ts
+  if (!context.requestHeaders.has('Accept-Language')) {
+    context.headers.set('Accept-Language', language());
+  }
+  ```
+  
+  The `license` field of the packages says `MIT`, as the `LICENSE` file of the repository always did; it said `ISC`.
+  
+  The guide of the MCP server says how to use the client with a query layer (TanStack Query): the signal of a query cancels its request, and the errors of the client say what is worth another try.
+
+### Patch Changes
+
+- [#96](https://github.com/punicalab/punica-request/pull/96) [`175d83d`](https://github.com/punicalab/punica-request/commit/175d83d83b1699996a84510d5c215963f9d3b3dc) Thanks [@punicalab](https://github.com/punicalab)! - The guide says where Punica Request meets Punica Form and Punica Components (a form that is submitted, what the server refuses, a field that asks the server) and points to an application on the three.
+
 ## 0.1.0
 
 ### Minor Changes
