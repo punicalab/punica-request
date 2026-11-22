@@ -254,6 +254,73 @@ describe('middlewares', () => {
     await api.get('items');
   });
 
+  it('tell the headers of the request from those of the client', async () => {
+    const seen: Array<Record<string, boolean | string | null>> = [];
+    const { adapter, sent } = recorder();
+    const api = createClient({
+      baseURL,
+      adapter,
+      headers: { Accept: 'application/json', 'Accept-Language': 'en' },
+      middlewares: [
+        (context, next) => {
+          seen.push({
+            language: context.requestHeaders.has('accept-language'),
+            accept: context.requestHeaders.has('Accept'),
+            merged: context.headers.get('accept-language')
+          });
+
+          // The language of the page, unless the request names its own
+          if (!context.requestHeaders.has('Accept-Language')) {
+            context.headers.set('Accept-Language', 'fr');
+          }
+
+          return next();
+        }
+      ]
+    });
+
+    await api.get('items');
+    await api.get('items', { headers: { 'Accept-Language': 'de' } });
+    await api.get('items', { headers: [['accept-language', 'tr']] });
+    await api.get('items', { headers: { 'Accept-Language': undefined } });
+
+    expect(seen).toEqual([
+      { language: false, accept: false, merged: 'en' },
+      { language: true, accept: false, merged: 'de' },
+      { language: true, accept: false, merged: 'tr' },
+      // Removed by the request: it named none
+      { language: false, accept: false, merged: null }
+    ]);
+    expect(sent.map((one) => one.headers['accept-language'])).toEqual([
+      'fr',
+      'de',
+      'tr',
+      'fr'
+    ]);
+  });
+
+  it('cannot replace the headers of the request, and changing them sends nothing else', async () => {
+    const { adapter, sent } = recorder();
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [
+        (context, next) => {
+          expect(() => {
+            (context as any).requestHeaders = new Headers();
+          }).toThrow(TypeError);
+          context.requestHeaders.set('x-late', '1');
+
+          return next();
+        }
+      ]
+    });
+
+    await api.get('items', { headers: { 'X-Own': '1' } });
+
+    expect(sent[0].headers).toEqual({ 'x-own': '1' });
+  });
+
   it('see the options of the request, their own included', async () => {
     const { adapter } = recorder();
     let seen: unknown;

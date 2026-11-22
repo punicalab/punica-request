@@ -18,7 +18,7 @@
     "url": "git+https://github.com/punicalab/punica-request.git",
     "directory": "packages/mcp"
   },
-  "license": "ISC",
+  "license": "MIT",
   "author": "PunicaLab",
   "type": "module",
   "bin": {

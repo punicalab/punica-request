@@ -10,7 +10,7 @@
     "fetch"
   ],
   "homepage": "https://request.punicalab.com",
-  "license": "ISC",
+  "license": "MIT",
   "author": {
     "name": "Uryan Sezgin TEKE",
     "email": "uryan.sezgin.teke@gmail.com",

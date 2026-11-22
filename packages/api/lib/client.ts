@@ -124,6 +124,7 @@ export const createClient = (config: ClientConfig): Client => {
     const fixed = {
       method,
       options,
+      requestHeaders: own,
       signal: abort.signal,
       abort: abort.abort,
       throwHttpErrors: options.throwHttpErrors ?? config.throwHttpErrors ?? true
