@@ -260,7 +260,10 @@ export const timing: Middleware = async (context, next) => {
   them.
 - `context`: `method`, `url` (a `URL`), `headers` (`Headers`), `body`,
   `responseType`, `init`, `options` (the options of the request), `signal`,
-  `abort()`, `throwHttpErrors`.
+  `abort()`, `throwHttpErrors`, and `requestHeaders` (since 3.1): the headers
+  the request itself gave, without those of the client. To set a header
+  unless the request names its own:
+  `if (!context.requestHeaders.has('Accept-Language')) context.headers.set(…)`.
 - State of one request is a local variable. State shared by all requests
   lives in the closure of a factory: `const mine = (options) => { let
 shared; return async (context, next) => { … }; }`.
@@ -283,6 +286,70 @@ export const mockAdapter: Adapter = async (context) =>
 An adapter gets the `context` and returns a Fetch `Response` for any
 status, its body unread. It rejects only when no response came. Reading
 the body, statuses and timeouts are the client's work.
+
+## With a query layer
+
+The client sends; it keeps nothing of what came back. For loading and
+failed states, a cache the screens share and refetching, use it as the
+`queryFn` of TanStack Query (or SWR). The two fit without glue:
+
+```ts
+import { isHttpError, isRequestError } from '@punica/request';
+import { QueryClient, queryOptions } from '@tanstack/react-query';
+import { api } from './api';
+
+interface Item {
+  id: number;
+  name: string;
+}
+
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // A response is an answer, whatever its status; only a request that
+      // brought none is worth another try
+      retry: (failures, error) =>
+        !isHttpError(error) &&
+        isRequestError(error) &&
+        error.reason !== 'abort' &&
+        failures < 2
+    }
+  }
+});
+
+export const items = (page: number) =>
+  queryOptions({
+    queryKey: ['items', page],
+    // The signal of the query cancels the request
+    queryFn: async ({ signal }) =>
+      (await api.get<Item[]>('items', { query: { page }, signal })).data
+  });
+```
+
+Return `response.data` from a `queryFn`, pass its `signal` on, and leave the
+`cache` and `cancel` middlewares out of such a client: the query layer does
+both. `onError`, `refreshToken` and `tokenAuth` stay.
+
+## With the other Punica libraries
+
+Punica Request is one of three libraries made to be used together: Punica
+Form (`@punica/form`, forms and their rules) and Punica Components
+(`@punica/components`, the elements). Each has an MCP server; when the
+project has them, look their APIs up there instead of guessing. Where they
+meet:
+
+- **A form is submitted**: send the request inside the submit handler of the
+  form, with a request option of the application (`silent: true`, declared
+  by augmenting `RequestOptions`) that keeps `onError` from showing a message
+  the form shows itself.
+- **The server refuses it**: `isHttpError(error)` and `error.response.data`
+  give the messages by field; the `SetErrors` service of Punica Form puts
+  them on the fields.
+- **A field asks the server while the user types**: the validation of the
+  field gets a signal; pass it as `signal` of the request.
+
+A whole application on the three, with its tests:
+https://github.com/punicalab/punica-starter (start with its `AGENTS.md`).
 
 ## Node
 
