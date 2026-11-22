@@ -287,6 +287,49 @@ An adapter gets the `context` and returns a Fetch `Response` for any
 status, its body unread. It rejects only when no response came. Reading
 the body, statuses and timeouts are the client's work.
 
+## With a query layer
+
+The client sends; it keeps nothing of what came back. For loading and
+failed states, a cache the screens share and refetching, use it as the
+`queryFn` of TanStack Query (or SWR). The two fit without glue:
+
+```ts
+import { isHttpError, isRequestError } from '@punica/request';
+import { QueryClient, queryOptions } from '@tanstack/react-query';
+import { api } from './api';
+
+interface Item {
+  id: number;
+  name: string;
+}
+
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // A response is an answer, whatever its status; only a request that
+      // brought none is worth another try
+      retry: (failures, error) =>
+        !isHttpError(error) &&
+        isRequestError(error) &&
+        error.reason !== 'abort' &&
+        failures < 2
+    }
+  }
+});
+
+export const items = (page: number) =>
+  queryOptions({
+    queryKey: ['items', page],
+    // The signal of the query cancels the request
+    queryFn: async ({ signal }) =>
+      (await api.get<Item[]>('items', { query: { page }, signal })).data
+  });
+```
+
+Return `response.data` from a `queryFn`, pass its `signal` on, and leave the
+`cache` and `cancel` middlewares out of such a client: the query layer does
+both. `onError`, `refreshToken` and `tokenAuth` stay.
+
 ## Node
 
 `fetchAdapter()` works in Node 18 and later. `httpAdapter({ httpAgent,

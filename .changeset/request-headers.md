@@ -15,3 +15,5 @@ if (!context.requestHeaders.has('Accept-Language')) {
 ```
 
 The `license` field of the packages says `MIT`, as the `LICENSE` file of the repository always did; it said `ISC`.
+
+The guide of the MCP server says how to use the client with a query layer (TanStack Query): the signal of a query cancels its request, and the errors of the client say what is worth another try.
