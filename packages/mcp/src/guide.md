@@ -330,6 +330,27 @@ Return `response.data` from a `queryFn`, pass its `signal` on, and leave the
 `cache` and `cancel` middlewares out of such a client: the query layer does
 both. `onError`, `refreshToken` and `tokenAuth` stay.
 
+## With the other Punica libraries
+
+Punica Request is one of three libraries made to be used together: Punica
+Form (`@punica/form`, forms and their rules) and Punica Components
+(`@punica/components`, the elements). Each has an MCP server; when the
+project has them, look their APIs up there instead of guessing. Where they
+meet:
+
+- **A form is submitted**: send the request inside the submit handler of the
+  form, with a request option of the application (`silent: true`, declared
+  by augmenting `RequestOptions`) that keeps `onError` from showing a message
+  the form shows itself.
+- **The server refuses it**: `isHttpError(error)` and `error.response.data`
+  give the messages by field; the `SetErrors` service of Punica Form puts
+  them on the fields.
+- **A field asks the server while the user types**: the validation of the
+  field gets a signal; pass it as `signal` of the request.
+
+A whole application on the three, with its tests:
+https://github.com/punicalab/punica-starter (start with its `AGENTS.md`).
+
 ## Node
 
 `fetchAdapter()` works in Node 18 and later. `httpAdapter({ httpAgent,
