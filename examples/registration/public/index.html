@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Punica Request 3 — example</title>
+    <style>
+      body {
+        font:
+          15px/1.5 system-ui,
+          sans-serif;
+        margin: 2rem;
+      }
+      td,
+      th {
+        text-align: left;
+        padding: 0.2rem 0.8rem 0.2rem 0;
+        vertical-align: top;
+      }
+      .fail {
+        color: #b00020;
+        font-weight: 600;
+      }
+      .pass {
+        color: #0a6b2d;
+      }
+      code {
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Punica Request 3 — example</h1>
+    <p id="summary">Running…</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Scenario</th>
+          <th>Result</th>
+          <th>Detail</th>
+        </tr>
+      </thead>
+      <tbody id="results"></tbody>
+    </table>
+    <script>
+      window.API = '__API__';
+    </script>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
