@@ -260,7 +260,10 @@ export const timing: Middleware = async (context, next) => {
   them.
 - `context`: `method`, `url` (a `URL`), `headers` (`Headers`), `body`,
   `responseType`, `init`, `options` (the options of the request), `signal`,
-  `abort()`, `throwHttpErrors`.
+  `abort()`, `throwHttpErrors`, and `requestHeaders` (since 3.1): the headers
+  the request itself gave, without those of the client. To set a header
+  unless the request names its own:
+  `if (!context.requestHeaders.has('Accept-Language')) context.headers.set(…)`.
 - State of one request is a local variable. State shared by all requests
   lives in the closure of a factory: `const mine = (options) => { let
 shared; return async (context, next) => { … }; }`.

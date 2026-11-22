@@ -73,6 +73,12 @@ export interface RequestContext {
   readonly method: HttpMethod;
   /** The options the request was made with, those of middlewares included. */
   readonly options: RequestOptions;
+  /**
+   * The headers the request itself gave, without those of the client. A
+   * middleware that sets a header "unless the request names its own" asks
+   * here: `context.requestHeaders.has('Accept-Language')`.
+   */
+  readonly requestHeaders: Headers;
   /** Aborted when the request is cancelled or timed out. Always there. */
   readonly signal: AbortSignal;
   /** Cancels the request: it rejects with a `RequestError` of reason `abort`. */
