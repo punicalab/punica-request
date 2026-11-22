@@ -33,34 +33,48 @@ export interface CancelMiddleware extends Middleware {
 export const cancel = (options: CancelOptions = {}): CancelMiddleware => {
   const { getKey } = options;
   const underWay = new Map<string, RequestContext>();
-  /** The order the requests were made in: an attempt sent again keeps its place. */
-  const order = new WeakMap<RequestContext, number>();
+  /** When each request was made, and how often everything had been cancelled by then. */
+  const made = new WeakMap<RequestContext, { order: number; round: number }>();
+  /** The latest request made for a key, also after it ended. */
+  const latest = new Map<string, number>();
   let count = 0;
+  let round = 0;
 
   const middleware: Middleware = async function cancel(context, next) {
     // Cancelled already, and passing by on its way out: it has no say
     if (context.signal.aborted) return next();
 
-    if (!order.has(context)) order.set(context, (count += 1));
+    let own = made.get(context);
+
+    if (!own) {
+      own = { order: (count += 1), round };
+      made.set(context, own);
+    }
 
     const key =
       getKey?.(context) ??
       `${context.method} ${context.url.origin}${context.url.pathname}`;
-    const other = underWay.get(key);
 
-    if (other && other !== context) {
-      // Sent again, after a token was refreshed, while a later request
-      // took its place: the later one stays
-      if ((order.get(other) ?? 0) > (order.get(context) ?? 0)) {
-        context.abort();
+    // Sent again, after a token was refreshed, when a later request has
+    // taken its place or everything was cancelled meanwhile: it gives way
+    if (own.round !== round || (latest.get(key) ?? 0) > own.order) {
+      context.abort();
 
-        return next();
-      }
-
-      other.abort();
+      return next();
     }
 
+    const other = underWay.get(key);
+
+    if (other && other !== context) other.abort();
+
     underWay.set(key, context);
+    // The newest key last, so that the oldest can be forgotten
+    latest.delete(key);
+    latest.set(key, own.order);
+
+    if (latest.size > 1000) {
+      latest.delete(latest.keys().next().value as string);
+    }
 
     try {
       return await next();
@@ -74,6 +88,8 @@ export const cancel = (options: CancelOptions = {}): CancelMiddleware => {
     cancelAll() {
       const all = [...underWay.values()];
 
+      // Those that wait to be sent again are not under way: they see this
+      round += 1;
       underWay.clear();
       all.forEach((context) => context.abort());
     }

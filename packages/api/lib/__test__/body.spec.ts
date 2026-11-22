@@ -340,14 +340,18 @@ describe('the body of a response', () => {
     );
   });
 
-  it.each(['application/json-seq', 'application/jsonlines', 'text/x-json-ish'])(
-    'is not parsed for %s, which only looks like JSON',
-    async (type) => {
-      const { data } = await read(of('{"a":1}\n{"a":2}', type));
-
-      expect(typeof data === 'string' || data instanceof Blob).toBe(true);
-    }
-  );
+  it.each([
+    'application/json-seq',
+    'application/x-ndjson',
+    'application/jsonlines',
+    'application/json5',
+    'application/javascript',
+    'application/yaml'
+  ])('is text, not parsed, for %s', async (type) => {
+    expect((await read(of('{"a":1}\n{"a":2}', type))).data).toBe(
+      '{"a":1}\n{"a":2}'
+    );
+  });
 
   it('rejects with reason parse when 2xx JSON cannot be read', async () => {
     const { adapter } = recorder(of('<html>', 'application/json'));

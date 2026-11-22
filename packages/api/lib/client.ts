@@ -226,13 +226,15 @@ export const createClient = (config: ClientConfig): Client => {
 
       // A stream is read after the request: its caller can still cancel
       // it, until it has been read or given up
+      const stream = response.data;
+
       if (
-        response.raw?.body &&
-        response.data === response.raw.body &&
-        typeof ReadableStream === 'function'
+        typeof ReadableStream === 'function' &&
+        stream instanceof ReadableStream &&
+        !stream.locked
       ) {
+        response.data = watch(stream, abort.dispose);
         reading = true;
-        response.data = watch(response.raw.body, abort.dispose);
       }
 
       return response as HttpResponse<T>;

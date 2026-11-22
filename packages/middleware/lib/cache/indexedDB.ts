@@ -11,15 +11,15 @@ const STORE = 'RESPONSES';
 /** Databases that are open or being opened, by name: one each. */
 const databases = new Map<string, Promise<IDBDatabase>>();
 
-const open = (name: string): Promise<IDBDatabase> => {
+const open = (name: string, version?: number): Promise<IDBDatabase> => {
   const known = databases.get(name);
 
-  if (known) return known;
+  if (known && version === undefined) return known;
 
   const opening: Promise<IDBDatabase> = new Promise<IDBDatabase>(
     (resolve, reject) => {
       // Whatever version it has: one that another script upgraded opens too
-      const request = indexedDB.open(name);
+      const request = indexedDB.open(name, version);
       const forget = () => {
         if (databases.get(name) === opening) databases.delete(name);
       };
@@ -31,6 +31,18 @@ const open = (name: string): Promise<IDBDatabase> => {
       };
       // Fires once the store exists, also the first time
       request.onsuccess = () => {
+        // There, but without the store: made by something else. One
+        // version further, where the store is created
+        if (!request.result.objectStoreNames.contains(STORE)) {
+          const next = request.result.version + 1;
+
+          request.result.close();
+          forget();
+          open(name, next).then(resolve, reject);
+
+          return;
+        }
+
         // Another tab wants to change the database: let it
         request.result.onversionchange = () => {
           request.result.close();

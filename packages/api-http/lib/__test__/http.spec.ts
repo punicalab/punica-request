@@ -353,6 +353,31 @@ describe('httpAdapter', () => {
     }
   });
 
+  test('a response whose headers cannot be taken rejects instead of breaking the process', async () => {
+    const raw = net.createServer((socket) => {
+      socket.once('data', () =>
+        socket.end(
+          'HTTP/1.1 200 OK\r\nX-A: a\x00b\r\nContent-Length: 0\r\n\r\n'
+        )
+      );
+    });
+
+    await new Promise<void>((resolve) => raw.listen(0, '127.0.0.1', resolve));
+
+    try {
+      const api = createClient({
+        baseURL: `http://127.0.0.1:${(raw.address() as AddressInfo).port}`,
+        adapter: httpAdapter({ requestOptions: { insecureHTTPParser: true } }),
+        timeout: 2000
+      });
+      const error = await api.get('x').catch((e) => e);
+
+      expect(isRequestError(error) && error.reason).toBe('network');
+    } finally {
+      raw.close();
+    }
+  });
+
   test('the timeout of requestOptions ends a request on an idle socket', async () => {
     const api = createClient({
       baseURL,

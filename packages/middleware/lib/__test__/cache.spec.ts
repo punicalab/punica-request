@@ -124,6 +124,26 @@ describe('StorageIndexedDB', () => {
     expect(await new StorageIndexedDB().get('a')).toBeUndefined();
   });
 
+  test('makes its store in a database that is there without it', async () => {
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open('foreign', 3);
+
+      request.onupgradeneeded = () =>
+        request.result.createObjectStore('OPERATIONS');
+      request.onsuccess = () => {
+        request.result.close();
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
+
+    const storage = new StorageIndexedDB({ databaseName: 'foreign' });
+
+    await storage.set('a', entry(1));
+
+    expect((await storage.get('a'))?.data).toBe(1);
+  });
+
   test('opens the database again after its connection was closed', async () => {
     const storage = new StorageIndexedDB({ databaseName: 'closed' });
 
@@ -359,7 +379,7 @@ describe('cache', () => {
     expect((await api.get('items', { cache: true })).data).toEqual({ id: 1 });
   });
 
-  test('a ttl of 0 or less keeps nothing', async () => {
+  test('a ttl of 0 or less does not cache: nothing is kept and nothing kept is used', async () => {
     const storage = memory();
     const { adapter, sent } = recorder(json({ id: 1 }));
     const api = createClient({
@@ -373,7 +393,29 @@ describe('cache', () => {
 
     expect(sent).toHaveLength(2);
     expect(storage.kept.size).toBe(0);
+
+    await api.get('items', { cache: true });
+    await api.get('items', { cache: { ttl: 0 } });
+
+    expect(sent).toHaveLength(4);
   });
+
+  test.each(storages)(
+    'a ttl of Infinity is no expiry, with %s',
+    async (_, create) => {
+      const { adapter, sent } = recorder(json({ id: 1 }));
+      const api = createClient({
+        baseURL,
+        adapter,
+        middlewares: [cache({ storage: create() })]
+      });
+
+      await api.get('forever', { cache: { ttl: Infinity } });
+      await api.get('forever', { cache: { ttl: Infinity } });
+
+      expect(sent).toHaveLength(1);
+    }
+  );
 
   test('does not keep the cookies a response sets', async () => {
     const storage = memory();

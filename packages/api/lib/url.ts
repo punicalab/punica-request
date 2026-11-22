@@ -120,7 +120,8 @@ export const buildURL = (
     if (
       !url ||
       url.origin !== base.origin ||
-      !url.pathname.startsWith(base.pathname) ||
+      // Under the base, or the base itself written without its slash
+      !`${url.pathname}/`.startsWith(base.pathname) ||
       url.username !== base.username ||
       url.password !== base.password
     ) {
@@ -131,9 +132,9 @@ export const buildURL = (
   } else {
     url = parse(path) ?? (page() ? parse(path, page()) : undefined);
 
-    if (!url) {
+    if (!url || (url.protocol !== 'http:' && url.protocol !== 'https:')) {
       throw new TypeError(
-        `"${path}" is not a whole address and the client has no baseURL.`
+        `"${path}" is not a whole http(s) address and the client has no baseURL.`
       );
     }
   }

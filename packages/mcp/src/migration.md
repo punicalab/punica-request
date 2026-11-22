@@ -52,49 +52,53 @@ const api = createClient({
 
 ## Every change
 
-| 2.x                                                                | 3.0                                                                                              |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| `new RequestAPI(new APIFetch(), config)`                           | `createClient({ adapter: fetchAdapter(), …config })`                                             |
-| `new APIHttp()`                                                    | `httpAdapter()`                                                                                  |
-| `hostname`                                                         | `baseURL` (slashes do not matter any more)                                                       |
-| `requestInit.headers`                                              | `headers`                                                                                        |
-| `requestInit` (other fields)                                       | `init`                                                                                           |
-| `requestMiddlewares` + `responseMiddlewares`                       | one `middlewares` list, outermost first                                                          |
-| `api.get({ path: 'items', … })`                                    | `api.get('items', { … })`                                                                        |
-| `api.get<Sent, Received>(…)`                                       | `api.get<Received>(…)`                                                                           |
-| `data: JSON.stringify(x)` + a `Content-Type` header                | `json: x`                                                                                        |
-| `data: formData`                                                   | `body: formData`                                                                                 |
-| `init: { headers }` on a request                                   | `headers` on the request                                                                         |
-| `init: { signal }` on a request                                    | `signal` on the request                                                                          |
-| `contentType: 'json'`                                              | nothing: read by the `Content-Type` of the response; `responseType` to decide                    |
-| `response.payload`                                                 | `response.data`                                                                                  |
-| `response.response`                                                | `response.raw`                                                                                   |
-| a response outside 2xx resolves; `isHttpStatusOk(response.status)` | it rejects with `HttpError`; `isHttpError(error)`, or `throwHttpErrors: false` and `response.ok` |
-| `ErrorMiddleware` rejects with the `ProcessData`                   | the request rejects with `HttpError` (`.status`, `.response.data`, `.context`)                   |
-| a request that could not be sent                                   | rejects with `RequestError` (`.reason`)                                                          |
-| `query: { a: null }` sent as `a=null`                              | left out                                                                                         |
-| `new TokenAuthMiddleware({ cookieName, headerName, tokenFormat })` | `tokenAuth({ cookieName, headerName?, tokenFormat? })`; or `getToken`                            |
-| `new CookieMiddleware({ cookieName, headerName })`                 | `cookie({ cookieName, headerName })`                                                             |
-| `new CancelRequestMiddleware({ timeout, getKey })`                 | `cancel({ getKey })`; `timeout` is an option of the client or the request                        |
-| `cancelRequest.cancelAllRequests()`                                | `cancel().cancelAll()`                                                                           |
-| `new CacheMiddleware({ storage })`                                 | `cache({ storage })`                                                                             |
-| `cache: { expireTime }`                                            | `cache: { ttl }`; `cache: true` for no expiry                                                    |
-| `IStorage.read(url)` / `write(url, contentType, body, expireTime)` | `IStorage.get(key)` / `set(key, entry)`; the middleware looks after expiry                       |
-| `new RefreshTokenMiddleware({ tokenProvider, exclude })`           | `refreshToken({ refresh, exclude })`; `exclude` gets the `context`                               |
-| `new ErrorMiddleware({ contentType, error: { 401: fn } })`         | `onError({ 401: fn })`; a handler gets `(response, context)`                                     |
-| `getActive`, `getAvailableMethods`, `availableMethods()`           | `when(predicate, middleware)`                                                                    |
-| `class X extends BaseMiddleware { process = (processData) => … }`  | `const x: Middleware = async (context, next) => …`                                               |
-| `this.next(processData)`                                           | `return next()`                                                                                  |
-| `processData.resolve(response)`                                    | `return response`                                                                                |
-| `processData.reject(error)`                                        | `throw error`                                                                                    |
-| `processData.httpResponse`, `notifier.addSubscriber(…)`            | `const response = await next()` and the code after it                                            |
-| `this.restart(processData)`                                        | `return next()` once more                                                                        |
-| `processData.params.init.headers = { … }`                          | `context.headers.set(name, value)`                                                               |
-| `processData.params.requestURL`                                    | `context.url.href`                                                                               |
-| `processData.method`, `processData.config`                         | `context.method`; configuration is in the closure of your factory                                |
-| `IRequest` (a class with five methods)                             | `Adapter`: `(context) => Promise<Response>`                                                      |
-| `IConfig`, `RequestParams`, `ProcessData`, `ContentType`           | `ClientConfig`, `RequestOptions`, `RequestContext`, `ResponseType`                               |
-| `mergeConfig`, `cleanNulls`, `Notifier`, `@Middleware`             | removed, nothing replaces them                                                                   |
+| 2.x                                                                                                | 3.0                                                                                              |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `new RequestAPI(new APIFetch(), config)`                                                           | `createClient({ adapter: fetchAdapter(), …config })`                                             |
+| `new APIHttp()`                                                                                    | `httpAdapter()`                                                                                  |
+| `hostname`                                                                                         | `baseURL` (slashes do not matter any more)                                                       |
+| `requestInit.headers`                                                                              | `headers`                                                                                        |
+| `requestInit` (other fields)                                                                       | `init`                                                                                           |
+| `requestMiddlewares` + `responseMiddlewares`                                                       | one `middlewares` list, outermost first                                                          |
+| `api.get({ path: 'items', … })`                                                                    | `api.get('items', { … })`                                                                        |
+| `api.get<Sent, Received>(…)`                                                                       | `api.get<Received>(…)`                                                                           |
+| `data: JSON.stringify(x)` + a `Content-Type` header                                                | `json: x`                                                                                        |
+| `data: formData`                                                                                   | `body: formData`                                                                                 |
+| `init: { headers }` on a request                                                                   | `headers` on the request                                                                         |
+| `init: { signal }` on a request                                                                    | `signal` on the request                                                                          |
+| `contentType: 'json'`                                                                              | nothing: read by the `Content-Type` of the response; `responseType` to decide                    |
+| `response.payload`                                                                                 | `response.data`                                                                                  |
+| `response.response`                                                                                | `response.raw`                                                                                   |
+| a response outside 2xx resolves; `isHttpStatusOk(response.status)`                                 | it rejects with `HttpError`; `isHttpError(error)`, or `throwHttpErrors: false` and `response.ok` |
+| `ErrorMiddleware` rejects with the `ProcessData`                                                   | the request rejects with `HttpError` (`.status`, `.response.data`, `.context`)                   |
+| a request that could not be sent                                                                   | rejects with `RequestError` (`.reason`)                                                          |
+| `query: { a: null }` sent as `a=null`                                                              | left out                                                                                         |
+| `query: { a: undefined }` sent as `a=undefined`                                                    | left out                                                                                         |
+| `query: { tags: ['a', 'b'] }` sent as `tags=a,b`                                                   | sent as `tags=a&tags=b`: join the array yourself if the server wants one value                   |
+| a `Date` in `query` sent as its `String()`                                                         | sent as ISO text                                                                                 |
+| `new TokenAuthMiddleware({ cookieName, headerName, tokenFormat })`                                 | `tokenAuth({ cookieName, headerName?, tokenFormat? })`; or `getToken`                            |
+| `new CookieMiddleware({ cookieName, headerName })`                                                 | `cookie({ cookieName, headerName })`                                                             |
+| `new CancelRequestMiddleware({ timeout, getKey })`                                                 | `cancel({ getKey })`; `timeout` is an option of the client or the request                        |
+| `cancelRequest.cancelAllRequests()`                                                                | `const latest = cancel()` in the list, then `latest.cancelAll()`                                 |
+| `new CacheMiddleware({ storage })`                                                                 | `cache({ storage })`                                                                             |
+| `cache: { expireTime }`                                                                            | `cache: { ttl }`; `cache: true` for no expiry                                                    |
+| `IStorage.read(url)` / `write(url, contentType, body, expireTime)`                                 | `IStorage.get(key)` / `set(key, entry)`; the middleware looks after expiry                       |
+| `new RefreshTokenMiddleware({ tokenProvider, exclude })`                                           | `refreshToken({ refresh, exclude })`; `exclude` gets the `context`                               |
+| `new ErrorMiddleware({ contentType, error: { 401: fn } })`                                         | `onError({ 401: fn })`; a handler gets `(response, context)`                                     |
+| `getActive`, `getAvailableMethods`, `availableMethods()`                                           | `when(predicate, middleware)`                                                                    |
+| `class X extends BaseMiddleware { process = (processData) => … }`                                  | `const x: Middleware = async (context, next) => …`                                               |
+| `this.next(processData)`                                                                           | `return next()`                                                                                  |
+| `processData.resolve(response)`                                                                    | `return response`                                                                                |
+| `processData.reject(error)`                                                                        | `throw error`                                                                                    |
+| `processData.httpResponse`, `notifier.addSubscriber(…)`                                            | `const response = await next()` and the code after it                                            |
+| `this.restart(processData)`                                                                        | `return next()` once more                                                                        |
+| `processData.params.init.headers = { … }`                                                          | `context.headers.set(name, value)`                                                               |
+| `processData.params.requestURL`                                                                    | `context.url.href`                                                                               |
+| `processData.method`, `processData.config`                                                         | `context.method`; configuration is in the closure of your factory                                |
+| `IRequest` (a class with five methods)                                                             | `Adapter`: `(context) => Promise<Response>`                                                      |
+| `IConfig`, `RequestParams`, `ProcessData`, `ContentType`                                           | `ClientConfig`, `RequestOptions`, `RequestContext`, `ResponseType`                               |
+| `RequestMethods`                                                                                   | `HttpMethod`                                                                                     |
+| `mergeConfig`, `cleanNulls`, `Notifier`, `Subscriber`, `availableMiddlewareMethods`, `@Middleware` | removed, nothing replaces them                                                                   |
 
 `StatusCode`, `getCookie`, `setCookie`, `deleteCookie`, `IPatch`,
 `StorageSession` and `StorageIndexedDB` keep their names.

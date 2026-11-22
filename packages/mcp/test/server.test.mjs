@@ -414,6 +414,183 @@ test('validate_code knows the rules of 3.x', async () => {
   );
 });
 
+test('validate_code finds what is wrong without a 2.x name in it', async () => {
+  const { call } = await connect();
+  const check = (code) => call('validate_code', { code });
+
+  assert.match(
+    await check('const api = createClient({ baseURL: "https://x" });'),
+    /^1 problem:\nline 1 adapter: A client needs an adapter/
+  );
+  assert.match(
+    await check(
+      'createClient({\n  adapter: fetchAdapter,\n  middlewares: [tokenAuth, cancel]\n});'
+    ),
+    /^3 problems:\nline 2 adapter: fetchAdapter makes the adapter.*\nline 3 middleware-call: tokenAuth makes the middleware.*\nline 3 middleware-call: cancel makes the middleware.*\[fix: call it with its options: cancel\(\)\]$/
+  );
+  assert.match(
+    await check('await api.get("items", { json: { a: 1 } });'),
+    /^1 problem:\nline 1 body: A GET request has no body/
+  );
+  assert.match(
+    await check('await api.post("items", { data: item });'),
+    /^1 problem:\nline 1 v2: data is the option of 2\.x\. \[fix: json: value/
+  );
+  assert.match(
+    await check('use((await api.get("items")).payload);'),
+    /v2: payload is the body of a response/
+  );
+  assert.match(
+    await check('const { path, query } = o;\nawait api.get({ path, query });'),
+    /line 2 v2: The path is not an option any more/
+  );
+  assert.match(
+    await check('tokenAuth({ cookieName: "t" }, "X-Auth");'),
+    /v2: tokenAuth takes one object/
+  );
+  assert.match(
+    await check('const m = async (context, next) => { await next(); };'),
+    /^1 problem:\nline 1 middleware-return/
+  );
+  assert.match(
+    await check(
+      'const m = async (context, next) => {\r\n  await next();\r\n};\r\n'
+    ),
+    /^1 problem:\nline 2 middleware-return/
+  );
+  assert.match(
+    await check(
+      'async function m(context: RequestContext, next: Next) {\n  log();\n  next();\n}'
+    ),
+    /line 3 middleware-return/
+  );
+  assert.match(
+    await check('const m = (context, next) => next(context);'),
+    /^1 problem:\nline 1 next: next takes no argument/
+  );
+  // Other ways of taking a name from a package
+  assert.match(
+    await check(
+      'import * as P from "@punica/request";\nconst api = new P.RequestAPI(adapter, {});\nP.createClient({ adapter });'
+    ),
+    /line 1 unknown-export: @punica\/request does not export RequestAPI\. \[fix: createClient/
+  );
+  assert.match(
+    await check('import RequestAPI from "@punica/request";'),
+    /unknown-export: @punica\/request has no default export/
+  );
+  assert.match(
+    await check('export { RequestAPI } from "@punica/request";'),
+    /does not export RequestAPI/
+  );
+  assert.match(
+    await check('const { APIFetch } = require("@punica/request-fetch");'),
+    /does not export APIFetch\. \[fix: fetchAdapter\(\)/
+  );
+  assert.match(
+    await check('const { nope: x } = await import("@punica/request");'),
+    /does not export nope/
+  );
+  assert.match(
+    await check('import { x } from "@punica/request-axios";'),
+    /unknown-package: There is no @punica\/request-axios/
+  );
+});
+
+test('validate_code leaves correct code and the code of other libraries alone', async () => {
+  const { call } = await connect();
+
+  for (const code of [
+    // Keys of what is sent are not options of the request
+    'await api.post("posts", { json: { title: "a", body: "text", data: 1, hostname: "x" } });',
+    // One type argument, whatever it holds
+    'await api.get<{ id: number, name: string }>("items/1");\nawait api.get<[number, string]>("pair");\nawait api.get<Map<string, (a: number, b: number) => void>>("m");',
+    // hostname of something else, in a file with a client
+    'const api = createClient({ adapter: httpAdapter({ requestOptions: { hostname: "x" } }) });\nconst h = { hostname: u.hostname };',
+    // Comments and texts are not code
+    'createClient({\n  adapter,\n  middlewares: [\n    // tokenAuth() reads the cookie, refreshToken() after it would be wrong\n    onError({}),\n    refreshToken({ refresh }),\n    tokenAuth({ cookieName: "t" })\n  ]\n});',
+    'const a = createClient({ adapter, middlewares: [tokenAuth({ cookieName: "[" })] });\nconst b = createClient({ adapter, middlewares: [refreshToken({ refresh })] });',
+    '// new RequestAPI(new APIFetch(), { hostname }) is how 2.x did it\nconst text = "response.payload and requestMiddlewares";',
+    // next() that is not the end of the middleware
+    'const m = async (context, next) => {\n  if (skip(context)) {\n    await next();\n  }\n\n  return next();\n};',
+    'const m = (context, next) => next();',
+    'const m = async (context, next) => {\n  const response = await next();\n  return response;\n};',
+    // Middlewares kept in variables, a client made from a spread configuration
+    'const latest = cancel();\ncreateClient({ adapter, middlewares: [latest, when((c) => c.method === "GET", cache({ storage }))] });\ncreateClient({ ...shared });\ncreateClient(config);',
+    // A storage of one's own, a handler named like a middleware
+    'const cache = new Map();\nprops.onError({ error: err });\nconst getActive = 1;',
+    // Other libraries: nothing here is taken from Punica Request
+    'import express from "express";\napp.use((req, res, next) => {\n  next();\n});\napp.post("/x", (req, res) => { const body: Body = req.body; res.json({ json: true }); });',
+    'import { createClient } from "@supabase/supabase-js";\ncreateClient(url, key, { headers: { "Content-Type": "application/json" } });\nconst { payload } = await dispatch(load());',
+    'import axios from "axios";\nawait axios.post<User, Result>("/x", { data: 1 });\nrouter.get({ path: "/x" });\ns3.putObject({ contentType: "x" });',
+    'import { x } from "@punica/requestor";',
+    // A file with nothing to do with requests
+    'const step = () => {\n  next();\n}'
+  ]) {
+    assert.match(await call('validate_code', { code }), /^No problems/, code);
+  }
+});
+
+test('validate_code answers at once, whatever it is given', async () => {
+  const { call } = await connect();
+  const within = async (code, limit = 1500) => {
+    const started = Date.now();
+    const report = await call('validate_code', { code });
+
+    assert.ok(
+      Date.now() - started < limit,
+      `${Date.now() - started} ms for ${JSON.stringify(code.slice(0, 30))}…`
+    );
+
+    return report;
+  };
+  const fill = (piece) => piece.repeat(Math.floor(199_000 / piece.length));
+
+  for (const piece of [
+    ' ',
+    '\n',
+    'next() ',
+    'next()\n',
+    '.post(',
+    'createClient({headers:{',
+    'createClient(',
+    'middlewares:[',
+    'hostname: ',
+    '.get<',
+    '.get<a,',
+    'import{',
+    '{payload ',
+    'new ErrorMiddleware<',
+    '(context, next) => {',
+    'tokenAuth({',
+    '"',
+    '/*',
+    '{[('
+  ]) {
+    await within(fill(piece));
+  }
+
+  assert.match(await within('next()' + ' '.repeat(190_000)), /^No problems/);
+  // Correct code of that size
+  assert.match(
+    await within(
+      fill('await api.post("items", { json: { a: [1, 2, { b: "c" }] } });\n')
+    ),
+    /^No problems/
+  );
+  // Too much to be a file of an application
+  assert.match(
+    await within('a'.repeat(200_001)),
+    /^1 problem:\nline 1 too-large: /
+  );
+  // Brackets that never close, and nothing at all
+  assert.match(
+    await within('createClient({ adapter, middlewares: [tokenAuth({'),
+    /^No problems/
+  );
+  assert.match(await within(''), /^No problems/);
+});
+
 test('validate_code accepts correct code, the examples of the guide included', async () => {
   const { call } = await connect();
   const examples = [...guide.matchAll(/```ts\n([\s\S]*?)```/g)].map(

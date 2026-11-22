@@ -111,5 +111,5 @@ await api.post('items', { body: JSON.stringify(item) });
 3 problems:
 line 3 middleware-order: onError after refreshToken sees the 401 before the token is refreshed, and reacts to requests that then succeed. [fix: put onError before refreshToken: the first in the list is the outermost]
 line 3 middleware-order: refreshToken after tokenAuth / cookie sends the request again with the old token: the request does not pass them a second time. [fix: put refreshToken before tokenAuth and cookie]
-line 6 body: A body is not serialised by hand: json does it. [fix: json: value]
+line 10 body: A body is not serialised by hand: json does it. [fix: json: value]
 ```

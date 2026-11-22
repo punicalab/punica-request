@@ -167,6 +167,93 @@ describe('cancel', () => {
     expect(await newer).toBe('answered');
   });
 
+  test('a request that waits for a token gives way to a later one that was answered already', async () => {
+    const { adapter, requests } = manual();
+    const refreshed = deferred<boolean>();
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [
+        refreshToken({ refresh: () => refreshed.promise }),
+        cancel()
+      ]
+    });
+    const older = reasonOf(api.get('search', { query: { q: 'a' } }));
+
+    await settled();
+    requests[0].answer(json({}, 401));
+    await settled();
+
+    const newer = reasonOf(api.get('search', { query: { q: 'b' } }));
+
+    await settled();
+    requests[1].answer(json({}));
+
+    expect(await newer).toBe('answered');
+
+    refreshed.resolve(true);
+
+    // Not sent again: its answer would arrive after the newer one
+    expect(await older).toBe('abort');
+    expect(requests).toHaveLength(2);
+  });
+
+  test('cancelAll also cancels a request that waits to be sent again', async () => {
+    const { adapter, requests } = manual();
+    const refreshed = deferred<boolean>();
+    const latest = cancel();
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [refreshToken({ refresh: () => refreshed.promise }), latest]
+    });
+    const waiting = reasonOf(api.get('items'));
+
+    await settled();
+    requests[0].answer(json({}, 401));
+    await settled();
+    latest.cancelAll();
+    refreshed.resolve(true);
+
+    expect(await waiting).toBe('abort');
+    expect(requests).toHaveLength(1);
+
+    // A request made after it is not touched
+    const next = reasonOf(api.get('items'));
+
+    await settled();
+    requests[1].answer(json({}));
+
+    expect(await next).toBe('answered');
+  });
+
+  test('remembers the latest request of a key without growing for ever', async () => {
+    const { adapter, requests } = manual();
+    const api = createClient({
+      baseURL,
+      adapter,
+      middlewares: [cancel({ getKey: (context) => context.url.href })]
+    });
+
+    for (let i = 0; i < 1100; i++) {
+      const pending = reasonOf(api.get(`items/${i}`));
+
+      await Promise.resolve();
+      await Promise.resolve();
+      requests[i].answer(json({}));
+
+      expect(await pending).toBe('answered');
+    }
+
+    // The first key was forgotten, and works as on the first day
+    const again = reasonOf(api.get('items/0'));
+
+    await settled();
+    requests[1100].answer(json({}));
+
+    expect(await again).toBe('answered');
+  });
+
   test('a request cancelled while it waits for a token cancels nothing when the token comes', async () => {
     const { adapter, requests } = manual();
     const refreshed = deferred<boolean>();

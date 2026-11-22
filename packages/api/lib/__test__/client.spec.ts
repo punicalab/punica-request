@@ -775,6 +775,66 @@ describe('cancellation', () => {
       expect(inner.aborted).toBe(false);
     });
 
+    it('follows the signal also when a middleware gave the response another stream', async () => {
+      const { controller, remove } = spied();
+      let inner: AbortSignal | undefined;
+      const api = createClient({
+        baseURL,
+        adapter: async (context) => {
+          inner = context.signal;
+
+          return body();
+        },
+        middlewares: [
+          async (_, next) => {
+            const response = await next();
+
+            response.data = (response.data as ReadableStream).pipeThrough(
+              new TransformStream()
+            );
+
+            return response;
+          }
+        ]
+      });
+      const { data } = await api.get<ReadableStream<Uint8Array>>('events', {
+        signal: controller.signal,
+        responseType: 'stream'
+      });
+
+      expect(remove).not.toHaveBeenCalled();
+
+      controller.abort();
+
+      expect(inner?.aborted).toBe(true);
+      expect(data).toBeInstanceOf(ReadableStream);
+    });
+
+    it('that a middleware reads itself is left alone, and nothing is left behind', async () => {
+      const { controller, add, remove } = spied();
+      const api = createClient({
+        baseURL,
+        adapter: async () => body(),
+        middlewares: [
+          async (_, next) => {
+            const response = await next();
+
+            // Locked from here on: nobody else can read it
+            (response.data as ReadableStream).getReader();
+
+            return response;
+          }
+        ]
+      });
+      const response = await api.get('events', {
+        signal: controller.signal,
+        responseType: 'stream'
+      });
+
+      expect((response.data as ReadableStream).locked).toBe(true);
+      expect(remove).toHaveBeenCalledTimes(add.mock.calls.length);
+    });
+
     it('is not ended by the timeout, which is over when the response is there', async () => {
       jest.useFakeTimers();
 

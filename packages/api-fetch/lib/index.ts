@@ -9,6 +9,14 @@ export interface FetchAdapterOptions {
   fetch?: typeof fetch;
 }
 
+/** Base64 of a text, as bytes of UTF-8. */
+const toBase64 = (text: string): string =>
+  btoa(
+    Array.from(new TextEncoder().encode(text), (byte) =>
+      String.fromCharCode(byte)
+    ).join('')
+  );
+
 /**
  * Sends requests with `fetch`: in browsers, in Node 18 and later, in workers
  * and wherever else `fetch` exists.
@@ -29,10 +37,26 @@ export const fetchAdapter =
       );
     }
 
-    return send(context.url.href, {
+    let { url, headers } = context;
+
+    // fetch refuses an address that holds credentials: they go in a header
+    if (url.username || url.password) {
+      const credentials = `${decodeURIComponent(url.username)}:${decodeURIComponent(url.password)}`;
+
+      url = new URL(url.href);
+      url.username = '';
+      url.password = '';
+      headers = new Headers(headers);
+
+      if (!headers.has('authorization')) {
+        headers.set('authorization', `Basic ${toBase64(credentials)}`);
+      }
+    }
+
+    return send(url.href, {
       ...context.init,
       method: context.method,
-      headers: context.headers,
+      headers,
       body: context.body,
       signal: context.signal
     });

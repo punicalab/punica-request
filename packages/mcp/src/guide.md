@@ -43,6 +43,9 @@ the adapter: `credentials`, `mode`, `redirect`, …), `middlewares`.
   `'items:batch'` is a path.
 - A relative `baseURL` (`'/api'`) works in a page only; on a server give
   the whole address.
+- Do not give the client a `Content-Type` header: it would go with every
+  request, those without a body included. `json` sets it where it is
+  needed; `Accept` says what the client reads.
 
 ## Requests
 
@@ -89,9 +92,11 @@ console.log(list.status, list.headers.get('x-total'), list.data);
   removes one for that request.
 - A response is `{ ok, status, headers, data, raw }`. `headers` is a
   `Headers` object. `data` is read by the `Content-Type` of the response:
-  JSON is parsed, text is text, anything else is a `Blob`; no body is
+  JSON is parsed; text (`text/*`, XML, or no `Content-Type` at all) is a
+  string; anything else is a `Blob`; no body, or an empty one, is
   `undefined`. `responseType: 'json' | 'text' | 'blob' | 'arrayBuffer' |
-'formData' | 'stream'` decides instead when given.
+'formData' | 'stream'` decides instead when given. With `'stream'`, `data`
+  is a `ReadableStream` you read yourself; `raw.body` is then taken.
 
 ## Errors
 
@@ -129,7 +134,9 @@ read by its `Content-Type`, whatever `responseType` asked for.
 
 `signal` cancels one request; `timeout` (client or request, `0` for none)
 limits the whole request, middlewares and retries included. Both reject
-with a `RequestError` (`'abort'`, `'timeout'`).
+with a `RequestError` (`'abort'`, `'timeout'`). For `responseType:
+'stream'` the timeout ends when the response is there; the `signal` still
+cancels the stream while you read it.
 
 ```ts
 import { api } from './api';
@@ -197,15 +204,15 @@ The order matters. Two rules:
 
 `cache` and `cancel` go after those.
 
-| Middleware                                                             | What it does                                                                                                                                            |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tokenAuth({ cookieName } \| { getToken }, headerName?, tokenFormat?)` | Sends a token: from a cookie, or from `getToken(context)` (may be async). Default header `Authorization`, format `'Bearer ${token}'`.                   |
-| `cookie({ cookieName, headerName })`                                   | Sends the value of a cookie in a header (CSRF).                                                                                                         |
-| `cancel({ getKey? })`                                                  | The same request sent again cancels the earlier one (same method and address without query). Returns the middleware with `cancelAll()`.                 |
-| `cache({ storage, getKey? })`                                          | Answers `GET` requests made with `cache: true` or `cache: { ttl }` (ms) from the storage. Keeps 2xx responses only.                                     |
-| `refreshToken({ refresh, exclude? })`                                  | On a 401: calls `refresh` once for all requests that failed meanwhile, sends each again once. `refresh` returning `false` leaves the 401 as the answer. |
-| `onError({ [status]: handler, default? })`                             | Calls `handler(response, context)` for responses outside 2xx; the request still rejects with its `HttpError`. Silent for `throwHttpErrors: false`.      |
-| `when(predicate, middleware)` (core)                                   | Limits a middleware to some requests.                                                                                                                   |
+| Middleware                                                                             | What it does                                                                                                                                              |
+| -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tokenAuth({ cookieName, headerName?, tokenFormat? })` or `tokenAuth({ getToken, … })` | Sends a token: from a cookie, or from `getToken(context)` (may be async). One options object. Default header `Authorization`, format `'Bearer ${token}'`. |
+| `cookie({ cookieName, headerName })`                                                   | Sends the value of a cookie in a header (CSRF).                                                                                                           |
+| `cancel({ getKey? })`                                                                  | The same request sent again cancels the earlier one (same method and address without query). Returns the middleware with `cancelAll()`.                   |
+| `cache({ storage, getKey? })`                                                          | Answers `GET` requests made with `cache: true` or `cache: { ttl }` (ms) from the storage. Keeps 2xx responses only.                                       |
+| `refreshToken({ refresh, exclude? })`                                                  | On a 401: calls `refresh` once for all requests that failed meanwhile, sends each again once. `refresh` returning `false` leaves the 401 as the answer.   |
+| `onError({ [status]: handler, default? })`                                             | Calls `handler(response, context)` for responses outside 2xx; the request still rejects with its `HttpError`. Silent for `throwHttpErrors: false`.        |
+| `when(predicate, middleware)` (core)                                                   | Limits a middleware to some requests.                                                                                                                     |
 
 `StorageSession` keeps JSON and text until the tab is closed;
 `StorageIndexedDB` keeps binary bodies too, across visits. A storage of
@@ -244,8 +251,10 @@ export const timing: Middleware = async (context, next) => {
 - Reject by throwing.
 - A response outside 2xx arrives as a **response**, not as an error: check
   `response.status` or `response.ok`; no `try` is needed for that. The
-  `HttpError` is thrown after every middleware has returned. Only
-  `RequestError`s (no response at all) are thrown through `next()`.
+  `HttpError` is thrown after every middleware has returned. What is
+  thrown through `next()` is a `RequestError` (no response at all), or an
+  error of the code: what a middleware further in threw, a `TypeError` for
+  a request that cannot be sent.
 - `next()` may be called again to send the request again. Change headers
   with `context.headers.set`, never `append`, so a retry does not double
   them.

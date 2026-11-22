@@ -56,6 +56,11 @@ export const cache = (options: CacheOptions): Middleware => {
   return async function cache(context, next) {
     const asked = context.options.cache;
 
+    const ttl = typeof asked === 'object' && asked ? asked.ttl : undefined;
+
+    // A ttl that is over at once: the request is not cached at all
+    if (ttl !== undefined && !(ttl > 0)) return next();
+
     // A stream is read once, by the caller: there is nothing to keep
     if (
       !asked ||
@@ -76,7 +81,7 @@ export const cache = (options: CacheOptions): Middleware => {
 
       if (entry) {
         const expired =
-          entry.expiresAt !== undefined && Date.now() >= entry.expiresAt;
+          typeof entry.expiresAt === 'number' && Date.now() >= entry.expiresAt;
 
         stale = true;
 
@@ -106,10 +111,7 @@ export const cache = (options: CacheOptions): Middleware => {
     }
 
     const response: HttpResponse = await next();
-    const ttl = typeof asked === 'object' ? asked.ttl : undefined;
-
-    // A ttl that is over at once keeps nothing
-    if (response.ok && (ttl === undefined || ttl > 0)) {
+    if (response.ok) {
       const headers: Array<[string, string]> = [];
 
       // Cookies are for the browser, once; they are not kept
@@ -122,7 +124,10 @@ export const cache = (options: CacheOptions): Middleware => {
           status: response.status,
           headers,
           data: response.data,
-          ...(ttl ? { expiresAt: Date.now() + ttl } : {})
+          // Infinity is no expiry
+          ...(ttl && Number.isFinite(ttl)
+            ? { expiresAt: Date.now() + ttl }
+            : {})
         });
       } catch {
         // The response is what was asked for; the cache is a convenience

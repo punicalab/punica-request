@@ -9,7 +9,9 @@ const sniff = (contentType: string | null): ResponseType => {
   if (
     /^\s*text\//i.test(contentType) ||
     /[/+]xml\b/i.test(contentType) ||
-    /x-www-form-urlencoded/i.test(contentType)
+    /x-www-form-urlencoded/i.test(contentType) ||
+    // Text that is no JSON document: lines of JSON, scripts, YAML
+    /json|javascript|ecmascript|yaml/i.test(contentType)
   ) {
     return 'text';
   }

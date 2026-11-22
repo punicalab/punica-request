@@ -71,18 +71,21 @@ export const httpAdapter =
         },
         (incoming) => {
           const status = incoming.statusCode ?? 0;
-          const received = new Headers();
-
-          // Pairs, so that a header sent twice (Set-Cookie) is there twice
-          for (let i = 0; i < incoming.rawHeaders.length; i += 2) {
-            received.append(incoming.rawHeaders[i], incoming.rawHeaders[i + 1]);
-          }
-
           const empty = method === 'HEAD' || BODILESS.has(status);
 
           if (empty) incoming.resume();
 
           try {
+            const received = new Headers();
+
+            // Pairs, so that a header sent twice (Set-Cookie) is there twice
+            for (let i = 0; i < incoming.rawHeaders.length; i += 2) {
+              received.append(
+                incoming.rawHeaders[i],
+                incoming.rawHeaders[i + 1]
+              );
+            }
+
             resolve(
               new Response(
                 empty ? null : (Readable.toWeb(incoming) as ReadableStream),
@@ -94,6 +97,7 @@ export const httpAdapter =
               )
             );
           } catch (error) {
+            // A header or a status that a Response does not take
             incoming.destroy();
             reject(error);
           }

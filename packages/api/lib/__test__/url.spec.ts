@@ -99,6 +99,27 @@ describe('the address of a request', () => {
     }
   );
 
+  it.each(['https://api.example.com/v1', '../v1', ''])(
+    'takes %j, which is the base itself',
+    async (path) => {
+      expect(await urlOf('https://api.example.com/v1', path)).toMatch(
+        /^https:\/\/api\.example\.com\/v1\/?$/
+      );
+    }
+  );
+
+  it.each(['file:///etc/passwd', 'data:text/plain,hi', 'items:batch'])(
+    'refuses %s when there is no base: it is no http(s) address',
+    async (path) => {
+      const { adapter, sent } = recorder();
+
+      await expect(createClient({ adapter }).get(path)).rejects.toThrow(
+        /not a whole http\(s\) address/
+      );
+      expect(sent).toHaveLength(0);
+    }
+  );
+
   it('keeps the credentials of the base', async () => {
     expect(await urlOf('http://user:pw@host.example/api', 'items')).toBe(
       'http://user:pw@host.example/api/items'
@@ -115,7 +136,7 @@ describe('the address of a request', () => {
     const { adapter } = recorder();
 
     await expect(createClient({ adapter }).get('/items')).rejects.toThrow(
-      /not a whole address/
+      /not a whole http\(s\) address/
     );
   });
 

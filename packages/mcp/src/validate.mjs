@@ -2,8 +2,6 @@
 // the packages do not export, the API of 2.x written against 3.x, and the
 // few rules 3.x has (the order of the middlewares, json or body).
 
-const lineOf = (code, index) => code.slice(0, index).split('\n').length;
-
 const PREFIX = '@punica/request';
 
 /** Names that were removed or never existed, and what to write instead. */
@@ -66,7 +64,10 @@ const RENAMED = {
     'there is no retry middleware: write one, a middleware may call next() again'
 };
 
-/** The API of 2.x, and what 3.x has instead. */
+/** More than any file of an application; the checks are not for bundles. */
+const MAX_LENGTH = 200_000;
+
+/** The API of 2.x, and what 3.x has instead. Patterns are bounded: no run of them is longer than a line or two. */
 const LEGACY_RULES = [
   {
     pattern: /\bnew\s+RequestAPI\s*\(/g,
@@ -81,7 +82,7 @@ const LEGACY_RULES = [
   },
   {
     pattern:
-      /\bnew\s+(TokenAuth|Cookie|Cache|CancelRequest|RefreshToken|Error)Middleware\s*(?:<[^>]*>)?\s*\(/g,
+      /\bnew\s+(TokenAuth|Cookie|Cache|CancelRequest|RefreshToken|Error)Middleware\b/g,
     message: (match) =>
       `${match[1]}Middleware is a class of 2.x; middlewares are made by functions.`,
     fix: (match) =>
@@ -103,12 +104,6 @@ const LEGACY_RULES = [
       'one list, `middlewares`, outermost first: onError, refreshToken, tokenAuth / cookie, cache, cancel'
   },
   {
-    pattern: /\bhostname\s*:/g,
-    when: (code) => /\b(?:createClient|RequestAPI)\b/.test(code),
-    message: 'hostname is the option of 2.x.',
-    fix: () => 'baseURL; it is joined with the path whatever their slashes'
-  },
-  {
     pattern: /\brequestInit\s*:/g,
     message: 'requestInit is the option of 2.x.',
     fix: () =>
@@ -116,14 +111,9 @@ const LEGACY_RULES = [
   },
   {
     pattern:
-      /\.(?:get|post|put|patch|delete)\s*(?:<[^()]*>)?\s*\(\s*\{\s*path\s*:/g,
+      /\.(?:get|post|put|patch|delete)\s*(?:<[^()]{0,200}>)?\s*\(\s*\{\s*path\b/g,
     message: 'The path is not an option any more.',
     fix: () => `the path is the first argument: api.get('items', { query })`
-  },
-  {
-    pattern: /\.(?:get|post|put|patch|delete)\s*<[^<>()]*,[^<>()]*>\s*\(/g,
-    message: 'A request has one type argument, the type of the data it brings.',
-    fix: () => 'api.post<Received>(path, { json })'
   },
   {
     pattern: /\bcontentType\s*:/g,
@@ -138,7 +128,7 @@ const LEGACY_RULES = [
   },
   {
     pattern:
-      /\b(?:response|res|result|httpResponse)\.payload\b|\{\s*payload\b[^}]*\}\s*=\s*await\b/g,
+      /(?:\b(?:response|res|result|httpResponse)|\))\.payload\b|\{\s*payload\b[^}\n]{0,200}\}\s*=\s*await\b/g,
     message: 'payload is the body of a response in 2.x.',
     fix: () => 'response.data'
   },
@@ -182,7 +172,7 @@ const LEGACY_RULES = [
     fix: () => 'context.headers.set(name, value)'
   },
   {
-    pattern: /\b(?:getActive|getAvailableMethods|availableMethods)\b/g,
+    pattern: /\b(?:getActive|getAvailableMethods|availableMethods)\s*[(:]/g,
     message: 'A middleware of 3.x has no switch of its own.',
     fix: () => `when((context) => context.method === 'GET', middleware)`
   },
@@ -198,30 +188,134 @@ const LEGACY_RULES = [
     fix: () => 'const latest = cancel(); latest.cancelAll()'
   },
   {
-    pattern: /\btokenProvider\s*:/g,
-    when: (code) => /\brefreshToken\s*\(/.test(code),
+    pattern: /\brefreshToken\s*\(\s*\{\s*tokenProvider\b/g,
     message: 'refreshToken takes a function, not a provider.',
     fix: () => 'refreshToken({ refresh: () => tokenProvider.refreshToken() })'
   },
   {
-    pattern: /\bonError\s*\(\s*\{\s*(?:contentType|error)\s*:/g,
+    pattern: /(?<![.\w])onError\s*\(\s*\{\s*(?:contentType|error)\s*:/g,
     message: 'onError takes the handlers themselves.',
     fix: () => 'onError({ 401: (response, context) => { … }, default: … })'
+  },
+  {
+    pattern: /\btokenAuth\s*\(\s*\{[^{}]{0,300}\}\s*,\s*[^)\s]/g,
+    message: 'tokenAuth takes one object.',
+    fix: () =>
+      `tokenAuth({ cookieName: 'token', headerName: 'X-Auth', tokenFormat: '\${token}' })`
   }
 ];
 
-/** The text between the bracket at `open` and the one that closes it. */
-function enclosed(code, open) {
-  const pairs = { '[': ']', '(': ')', '{': '}' };
-  const close = pairs[code[open]];
-  let depth = 0;
+const FACTORIES = 'tokenAuth|cookie|cancel|cache|refreshToken|onError';
 
-  for (let i = open; i < code.length; i++) {
-    if (code[i] === code[open]) depth++;
-    if (code[i] === close && --depth === 0) return code.slice(open + 1, i);
+/** Calls looked into, per rule: more than any file has, few enough to stay quick. */
+const MAX_CALLS = 400;
+
+/** The first matches of a pattern. */
+function* first(text, pattern, limit = MAX_CALLS) {
+  let count = 0;
+
+  for (const match of text.matchAll(pattern)) {
+    if (++count > limit) return;
+    yield match;
+  }
+}
+
+/**
+ * The code with its comments blanked and, in the second copy, the contents
+ * of its texts as well: what is left has the same length and the same line
+ * breaks, and its brackets are all real ones.
+ */
+function blank(code) {
+  const noComments = code.split('');
+  const bare = code.split('');
+  const wipe = (target, from, to) => {
+    for (let i = from; i < to; i++) if (target[i] !== '\n') target[i] = ' ';
+  };
+
+  for (let i = 0; i < code.length; i++) {
+    const char = code[i];
+
+    if (char === '/' && code[i + 1] === '/') {
+      let end = code.indexOf('\n', i);
+
+      if (end === -1) end = code.length;
+      wipe(noComments, i, end);
+      wipe(bare, i, end);
+      i = end;
+    } else if (char === '/' && code[i + 1] === '*') {
+      let end = code.indexOf('*/', i + 2);
+
+      end = end === -1 ? code.length : end + 2;
+      wipe(noComments, i, end);
+      wipe(bare, i, end);
+      i = end - 1;
+    } else if (char === "'" || char === '"' || char === '`') {
+      let end = i + 1;
+
+      while (end < code.length && code[end] !== char) {
+        // A text of one line ends with its line
+        if (code[end] === '\n' && char !== '`') break;
+        if (code[end] === '\\') end++;
+        end++;
+      }
+
+      wipe(bare, i + 1, end);
+      i = end;
+    }
   }
 
-  return code.slice(open + 1);
+  return { code: noComments.join(''), bare: bare.join('') };
+}
+
+const PAIRS = { '[': ']', '(': ')', '{': '}' };
+const OPENING = '([{';
+const CLOSING = ')]}';
+
+/** Where the bracket at `open` closes; not looked for further than `limit`. */
+function closeOf(bare, open, limit = 10_000) {
+  const end = Math.min(bare.length, open + limit);
+  let depth = 0;
+
+  for (let i = open; i < end; i++) {
+    if (bare[i] === bare[open]) depth++;
+    else if (bare[i] === PAIRS[bare[open]] && --depth === 0) return i;
+  }
+
+  return end;
+}
+
+/** The text between two positions, with what is inside its own brackets blanked. */
+function shallow(bare, from, to) {
+  let depth = 0;
+  let out = '';
+
+  for (let i = from; i < to; i++) {
+    const char = bare[i];
+
+    if (CLOSING.includes(char)) depth = Math.max(0, depth - 1);
+    out += depth === 0 || char === '\n' ? char : ' ';
+    if (OPENING.includes(char)) depth++;
+  }
+
+  return out;
+}
+
+/**
+ * The object literals among the arguments of the call whose parenthesis is
+ * at `open`: `[from, to]` of what is between their braces.
+ */
+function objectArguments(bare, open) {
+  const close = closeOf(bare, open);
+  const top = shallow(bare, open + 1, close);
+  const found = [];
+
+  for (const match of top.matchAll(/(^|,)\s*\{/g)) {
+    const brace = open + 1 + match.index + match[0].length - 1;
+
+    found.push([brace + 1, closeOf(bare, brace)]);
+  }
+
+  return found;
 }
 
 /** Whether the installed core is 2.x or older, which has another API. */
@@ -239,62 +333,149 @@ export function createValidator(knowledge) {
   const legacy = isLegacy(knowledge);
 
   /**
-   * @param {string} code
+   * @param {string} source
    * @returns {Array<{ line: number, rule: string, message: string, fix: string }>}
    */
-  function validate(code) {
-    const findings = [];
-    const add = (index, rule, message, fix) =>
-      findings.push({ line: lineOf(code, index), rule, message, fix });
-
-    for (const match of code.matchAll(
-      /import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*['"]([^'"]+)['"]/g
-    )) {
-      const source = match[2];
-
-      if (!source.startsWith(PREFIX)) continue;
-
-      if (!packageNames.includes(source)) {
-        add(
-          match.index,
-          'unknown-package',
-          `There is no ${source}.`,
-          `the packages are ${packageNames.join(', ')}; a package has one entry point`
-        );
-        continue;
-      }
-
-      // A list may hold comments
-      const list = match[1].replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
-
-      for (const part of list.split(',')) {
-        const name = part
-          .replace(/^\s*type\s+/, '')
-          .trim()
-          .split(/\s+as\s+/)[0];
-        const item = knowledge.get(name);
-
-        if (!name || item?.package === source) continue;
-
-        add(
-          match.index,
-          'unknown-export',
-          `${source} does not export ${name}.`,
-          item
-            ? `import it from "${item.package}"`
-            : legacy
-              ? 'look the name up with search_api'
-              : (RENAMED[name] ?? 'look the name up with search_api')
-        );
-      }
+  function validate(source) {
+    if (source.length > MAX_LENGTH) {
+      return [
+        {
+          line: 1,
+          rule: 'too-large',
+          message: `The code is ${source.length} characters long; the checker reads up to ${MAX_LENGTH}.`,
+          fix: 'check the files that use Punica Request one by one'
+        }
+      ];
     }
 
-    if (legacy) return findings.sort((a, b) => a.line - b.line);
+    const { code, bare } = blank(source.replace(/\r\n?/g, '\n'));
+    const starts = [0];
 
-    for (const { pattern, when, message, fix } of LEGACY_RULES) {
-      if (when && !when(code)) continue;
+    for (let i = code.indexOf('\n'); i !== -1; i = code.indexOf('\n', i + 1))
+      starts.push(i + 1);
 
-      for (const match of code.matchAll(pattern)) {
+    /** The line of a position, by bisection. */
+    const lineOf = (index) => {
+      let low = 0;
+      let high = starts.length - 1;
+
+      while (low < high) {
+        const middle = (low + high + 1) >> 1;
+
+        if (starts[middle] <= index) low = middle;
+        else high = middle - 1;
+      }
+
+      return low + 1;
+    };
+    const findings = [];
+    const add = (index, rule, message, fix) =>
+      findings.push({ line: lineOf(index), rule, message, fix });
+    const sorted = () => findings.sort((a, b) => a.line - b.line);
+    const isOurs = (name) =>
+      name === PREFIX ||
+      name.startsWith(`${PREFIX}/`) ||
+      name.startsWith(`${PREFIX}-`);
+    let imports = 0;
+    let ours = 0;
+
+    /** Checks the names taken from a package. */
+    const checkNames = (index, from, names) => {
+      if (!packageNames.includes(from)) {
+        add(
+          index,
+          'unknown-package',
+          `There is no ${from}.`,
+          `the packages are ${packageNames.join(', ')}; a package has one entry point`
+        );
+
+        return;
+      }
+
+      for (const name of names) {
+        const item = knowledge.get(name);
+
+        if (!name || item?.package === from) continue;
+
+        add(
+          index,
+          'unknown-export',
+          `${from} does not export ${name}.`,
+          item
+            ? `import it from "${item.package}"`
+            : (!legacy && RENAMED[name]) || 'look the name up with search_api'
+        );
+      }
+    };
+    const listed = (list) =>
+      list.split(',').map(
+        (part) =>
+          part
+            .replace(/^\s*type\s+/, '')
+            .trim()
+            .split(/\s*(?:\bas\b|:)\s*/)[0]
+      );
+
+    // import { a, type b as c } from, export { a } from
+    for (const match of code.matchAll(
+      /\b(?:import|export)\s*(?:type\s*)?\{([^{}]{0,2000})\}\s*from\s*['"]([^'"\n]{1,200})['"]/g
+    )) {
+      imports++;
+      if (!isOurs(match[2])) continue;
+      ours++;
+      checkNames(match.index, match[2], listed(match[1]));
+    }
+
+    // const { a, b: c } = require(), = await import()
+    for (const match of code.matchAll(
+      /\{([^{}]{0,2000})\}\s*=\s*(?:await\s+)?(?:require|import)\s*\(\s*['"]([^'"\n]{1,200})['"]/g
+    )) {
+      imports++;
+      if (!isOurs(match[2])) continue;
+      ours++;
+      checkNames(match.index, match[2], listed(match[1]));
+    }
+
+    // import * as P from: what is taken from P
+    for (const match of code.matchAll(
+      /\bimport\s*\*\s*as\s+(\w+)\s+from\s*['"]([^'"\n]{1,200})['"]/g
+    )) {
+      imports++;
+      if (!isOurs(match[2])) continue;
+      ours++;
+
+      const used = new Set(
+        [...code.matchAll(new RegExp(`\\b${match[1]}\\.(\\w+)`, 'g'))].map(
+          (found) => found[1]
+        )
+      );
+
+      checkNames(match.index, match[2], [...used]);
+    }
+
+    // import P from
+    for (const match of code.matchAll(
+      /\bimport\s+(?:type\s+)?(\w+)\s+from\s*['"]([^'"\n]{1,200})['"]/g
+    )) {
+      imports++;
+      if (!isOurs(match[2])) continue;
+      ours++;
+      add(
+        match.index,
+        'unknown-export',
+        `${match[2]} has no default export.`,
+        `import { ${RENAMED[match[1]] ? 'createClient' : match[1]} } from "${match[2]}"; look names up with search_api`
+      );
+    }
+
+    if (legacy) return sorted();
+
+    // A file that takes what it uses from elsewhere is not ours to judge:
+    // `next()`, `payload` and `createClient` mean other things there
+    if (imports > 0 && ours === 0) return sorted();
+
+    for (const { pattern, message, fix } of LEGACY_RULES) {
+      for (const match of bare.matchAll(pattern)) {
         add(
           match.index,
           'v2',
@@ -304,11 +485,119 @@ export function createValidator(knowledge) {
       }
     }
 
-    // The order of the middlewares
-    for (const match of code.matchAll(/\bmiddlewares\s*:\s*\[/g)) {
-      const list = enclosed(code, match.index + match[0].length - 1);
+    const oldClient = /\bRequestAPI\b/.test(bare);
+
+    if (oldClient) {
+      for (const match of bare.matchAll(/\bhostname\s*:/g)) {
+        add(
+          match.index,
+          'v2',
+          'hostname is the option of 2.x.',
+          'baseURL; it is joined with the path whatever their slashes'
+        );
+      }
+    }
+
+    // Two type arguments: api.get<Sent, Received>()
+    for (const match of first(bare, /\.(?:get|post|put|patch|delete)\s*</g)) {
+      const open = match.index + match[0].length - 1;
+      let depth = 0;
+      let commas = 0;
+      let close = -1;
+
+      for (let i = open; i < Math.min(bare.length, open + 400); i++) {
+        const char = bare[i];
+
+        if (char === '<' || OPENING.includes(char)) depth++;
+        else if (CLOSING.includes(char)) depth--;
+        else if (char === '>' && bare[i - 1] !== '=') {
+          if (--depth === 0) {
+            close = i;
+            break;
+          }
+        } else if (char === ',' && depth === 1) commas++;
+      }
+
+      if (
+        close !== -1 &&
+        commas > 0 &&
+        /^\s*\(/.test(bare.slice(close + 1, close + 20))
+      ) {
+        add(
+          match.index,
+          'v2',
+          'A request has one type argument, the type of the data it brings.',
+          'api.post<Received>(path, { json })'
+        );
+      }
+    }
+
+    // The client
+    for (const match of first(bare, /\bcreateClient\s*\(/g)) {
+      const open = match.index + match[0].length - 1;
+
+      for (const [from, to] of objectArguments(bare, open)) {
+        const keys = shallow(bare, from, to);
+
+        if (!oldClient) {
+          const hostname = /\bhostname\s*:/.exec(keys);
+
+          if (hostname) {
+            add(
+              from + hostname.index,
+              'v2',
+              'hostname is the option of 2.x.',
+              'baseURL; it is joined with the path whatever their slashes'
+            );
+          }
+        }
+
+        if (!/\badapter\b/.test(keys) && !keys.includes('...')) {
+          add(
+            match.index,
+            'adapter',
+            'A client needs an adapter; the core sends nothing by itself.',
+            'createClient({ adapter: fetchAdapter(), … }), with fetchAdapter from "@punica/request-fetch"'
+          );
+        }
+
+        const uncalled =
+          /\badapter\s*:\s*(fetchAdapter|httpAdapter)\b(?!\s*\()/.exec(keys);
+
+        if (uncalled) {
+          add(
+            from + uncalled.index,
+            'adapter',
+            `${uncalled[1]} makes the adapter; it is not the adapter.`,
+            `adapter: ${uncalled[1]}()`
+          );
+        }
+
+        // A Content-Type for every request
+        const headers = /\bheaders\s*:\s*\{/.exec(keys);
+
+        if (headers) {
+          const brace = from + headers.index + headers[0].length - 1;
+
+          if (/content-type/i.test(code.slice(brace, closeOf(bare, brace)))) {
+            add(
+              match.index,
+              'content-type',
+              'A Content-Type of the client goes with every request, those without a body included; json sets it for the requests that need it.',
+              'remove it from the headers of the client; use Accept to say what the client reads'
+            );
+          }
+        }
+      }
+    }
+
+    // The order of the middlewares, and middlewares that were not made
+    for (const match of first(bare, /\bmiddlewares\s*:\s*\[/g)) {
+      const open = match.index + match[0].length - 1;
+      const close = closeOf(bare, open);
+      const list = bare.slice(open + 1, close);
       const position = (name) => {
-        const found = new RegExp(`\\b${name}\\s*\\(`).exec(list);
+        const found = new RegExp(`(?<![.\\w])${name}\\s*\\(`).exec(list);
 
         return found ? found.index : -1;
       };
@@ -334,67 +623,95 @@ export function createValidator(knowledge) {
           'put refreshToken before tokenAuth and cookie'
         );
       }
+
+      const items = shallow(bare, open + 1, close);
+
+      for (const found of items.matchAll(
+        new RegExp(`(?<![.\\w])(${FACTORIES})\\b(?!\\s*\\()`, 'g')
+      )) {
+        add(
+          open + 1 + found.index,
+          'middleware-call',
+          `${found[1]} makes the middleware; it is not the middleware.`,
+          `call it with its options: ${found[1]}(${found[1] === 'cancel' ? '' : '{ … }'})`
+        );
+      }
     }
 
-    // json and body in one request
-    for (const match of code.matchAll(
-      /\.(?:post|put|patch|delete|request)\s*(?:<[^()]*>)?\s*\(/g
+    // The body of a request
+    for (const match of first(
+      bare,
+      /\.(get|head|post|put|patch|delete|request)\s*(?:<[^()]{0,200}>)?\s*\(/g
     )) {
-      const call = enclosed(code, match.index + match[0].length - 1);
+      const open = match.index + match[0].length - 1;
+      const method = match[1];
 
-      if (/\bjson\s*:/.test(call) && /\bbody\s*:/.test(call)) {
-        add(
-          match.index,
-          'body',
-          'A request has json or body, not both.',
-          'json for a value that is sent as JSON, body for anything else'
-        );
-      }
+      for (const [from, to] of objectArguments(bare, open)) {
+        const keys = shallow(bare, from, to);
+        const json =
+          /\bjson\s*:/.test(keys) || /(^|[{,]\s*)json\s*(,|$)/.test(keys);
+        const body =
+          /\bbody\s*:/.test(keys) || /(^|[{,]\s*)body\s*(,|$)/.test(keys);
 
-      if (/\b(?:json|body)\s*:\s*JSON\.stringify\s*\(/.test(call)) {
-        add(
-          match.index,
-          'body',
-          'A body is not serialised by hand: json does it.',
-          'json: value'
-        );
-      }
-    }
+        if (json && body) {
+          add(
+            match.index,
+            'body',
+            'A request has json or body, not both.',
+            'json for a value that is sent as JSON, body for anything else'
+          );
+        }
 
-    // A Content-Type for every request
-    for (const match of code.matchAll(/\bcreateClient\s*\(/g)) {
-      const config = enclosed(code, match.index + match[0].length - 1);
-      // The headers of the client itself, not those a middleware sets
-      const list = /\bmiddlewares\s*:\s*\[/.exec(config);
-      const own = list
-        ? config.replace(enclosed(config, list.index + list[0].length - 1), '')
-        : config;
-      const headers = /\bheaders\s*:\s*\{/.exec(own);
+        if ((json || body) && (method === 'get' || method === 'head')) {
+          add(
+            match.index,
+            'body',
+            `A ${method.toUpperCase()} request has no body.`,
+            'send what it needs in query, or use post'
+          );
+        }
 
-      if (
-        headers &&
-        /content-type/i.test(
-          enclosed(own, headers.index + headers[0].length - 1)
-        )
-      ) {
-        add(
-          match.index,
-          'content-type',
-          'A Content-Type of the client goes with every request, those without a body included; json sets it for the requests that need it.',
-          'remove it from the headers of the client; use Accept to say what the client reads'
-        );
+        if (/\b(?:json|body)\s*:\s*JSON\.stringify\b/.test(keys)) {
+          add(
+            match.index,
+            'body',
+            'A body is not serialised by hand: json does it.',
+            'json: value'
+          );
+        }
+
+        if (
+          /^(?:post|put|patch)$/.test(method) &&
+          !json &&
+          !body &&
+          /\bdata\s*:(?!\s*JSON\.stringify\b)/.test(keys)
+        ) {
+          add(
+            match.index,
+            'v2',
+            'data is the option of 2.x.',
+            'json: value for JSON, body: value for anything else'
+          );
+        }
       }
     }
 
     // A middleware that does not return what next() gives
-    for (const match of code.matchAll(
-      /^([^\n]*?)\bnext\(\)\s*;?[ \t]*\n\s*\}/gm
+    for (const match of first(
+      bare,
+      /\(\s*\w+\s*(?::[^,()]{0,80})?,\s*next\s*(?::[^,()]{0,80})?\)\s*(?::[^=]{0,120})?=>\s*\{|\bfunction\b[^(){}]{0,80}\(\s*\w+\s*(?::[^,()]{0,80})?,\s*next\s*(?::[^,()]{0,80})?\)\s*(?::[^{]{0,120})?\{/g
     )) {
-      const before = match[1].trim();
+      const open = match.index + match[0].length - 1;
+      const close = closeOf(bare, open);
+      const statements = shallow(bare, open + 1, close);
+      const last =
+        /(?:^|[;{}\n])[ \t]*(?:await[ \t]+)?next[ \t]*\([^()\n]{0,80}\)[ \t]*;?[ \t\n]{0,200}$/.exec(
+          statements
+        );
 
-      if (before === '' || before === 'await') {
+      if (last && !/\breturn\b[^;\n]{0,200}$/.test(statements.trimEnd())) {
         add(
-          match.index,
+          open + 1 + last.index + last[0].search(/\S/),
           'middleware-return',
           'A middleware returns a response; this one calls next() and returns nothing, which rejects the request.',
           'return next()'
@@ -402,7 +719,19 @@ export function createValidator(knowledge) {
       }
     }
 
-    return findings.sort((a, b) => a.line - b.line);
+    // next() takes nothing
+    for (const match of bare.matchAll(
+      /(?<![.\w])next\s*\(\s*(?:context|ctx|processData)\b/g
+    )) {
+      add(
+        match.index,
+        'next',
+        'next takes no argument: the request is the context every middleware shares.',
+        'next()'
+      );
+    }
+
+    return sorted();
   }
 
   return { validate };

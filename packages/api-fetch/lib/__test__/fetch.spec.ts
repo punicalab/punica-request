@@ -99,6 +99,26 @@ describe('fetchAdapter', () => {
     expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true);
   });
 
+  test('sends the credentials of the address in a header, which fetch takes', async () => {
+    fetchMock.mockImplementation(async () => new Response('ok'));
+
+    const client = createClient({
+      baseURL: 'https://us%C3%A9r:p%40ss@host/v1',
+      adapter: fetchAdapter()
+    });
+
+    await client.get('items');
+    await client.get('items', { headers: { Authorization: 'Bearer mine' } });
+
+    const [[url, init], [, second]] = fetchMock.mock.calls;
+
+    expect(url).toBe('https://host/v1/items');
+    expect(init.headers.get('authorization')).toBe(
+      `Basic ${Buffer.from('usér:p@ss').toString('base64')}`
+    );
+    expect(second.headers.get('authorization')).toBe('Bearer mine');
+  });
+
   test('uses the fetch it is given instead of the global one', async () => {
     const own = jest.fn(async () => new Response('hello'));
     const client = createClient({
