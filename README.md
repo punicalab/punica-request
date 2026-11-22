@@ -143,6 +143,16 @@ See [its README](./packages/mcp/README.md) for other clients and the tools.
 the published packages: a client with its middlewares, and what an
 application does with it, running in a browser and in Node.
 
+## An application
+
+[punica-starter](https://github.com/punicalab/punica-starter) is a small
+application on this library together with Punica Form and Punica Components: sign in, a list, and a form
+that is created and edited, with its tests. Start one of your own from it:
+
+```bash
+npm create punica@latest my-app
+```
+
 ## Development
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md).

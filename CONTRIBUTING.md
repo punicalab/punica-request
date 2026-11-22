@@ -53,6 +53,11 @@ Pull requests go to `develop`. When `develop` is merged into `main`, the
 release workflow opens a "version packages" pull request from the pending
 changesets; merging that one publishes to npm.
 
+A minor version comes at most once a month. A change of behaviour first goes
+out as a release candidate (`next`) and is tried in an application,
+[punica-starter](https://github.com/punicalab/punica-starter) at least,
+before it becomes the stable version.
+
 ## Help needed
 
 Please checkout the [open issues][issues]
