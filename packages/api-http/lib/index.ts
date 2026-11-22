@@ -1,164 +1,123 @@
-import http, { IncomingMessage } from 'http';
-import {
-  RequestParams,
-  IRequest,
-  IConfig,
-  mergeConfig,
-  IPatch,
-  HttpResponse,
-  isHttpStatusOk
-} from '@punica/request';
+import http from 'http';
+import https from 'https';
+import { Readable } from 'stream';
+import type { Adapter } from '@punica/request';
+
+/** The options of the http adapter. */
+export interface HttpAdapterOptions {
+  /** The agent of requests to `http:` addresses: connection pooling, a proxy. */
+  httpAgent?: http.Agent;
+  /** The agent of requests to `https:` addresses. */
+  httpsAgent?: https.Agent;
+  /**
+   * Passed to `http.request` / `https.request` with every request: `ca`,
+   * `rejectUnauthorized`, `family`, `localAddress`, …
+   */
+  requestOptions?: https.RequestOptions;
+}
+
+/** Statuses whose responses have no body. */
+const BODILESS = new Set([204, 205, 304]);
 
 /**
- * APIHttp class implements the IRequest interface and provides methods for making HTTP requests.
+ * Sends requests with the `http` and `https` modules of Node: for agents,
+ * certificates and what else `fetch` does not reach.
+ *
+ * It does not follow redirects (a 3xx is the response) and does not
+ * decompress; it sends no `Accept-Encoding` of its own.
+ *
+ * ```ts
+ * const api = createClient({ baseURL, adapter: httpAdapter() });
+ * ```
+ * @param options - The options of the adapter
  */
-export class APIHttp implements IRequest {
-  #config: IConfig;
+export const httpAdapter =
+  (options: HttpAdapterOptions = {}): Adapter =>
+  async (context) => {
+    const { url, method, signal } = context;
+    const secure = url.protocol === 'https:';
+    const headers: http.OutgoingHttpHeaders = {};
+    let body: Buffer | undefined;
 
-  /**
-   * Sets the configuration for the APIHttp instance.
-   * @param value - The configuration to set.
-   */
-  public set config(value: IConfig) {
-    this.#config = value;
-  }
-
-  /**
-   * Creates and merges the request configuration.
-   * @param params - The request parameters.
-   * @returns The merged request configuration.
-   */
-  private requestConfig<T>(params: RequestParams<T>): http.RequestOptions {
-    const { init, path } = params;
-    const { requestInit, hostname } = this.#config;
-    const config = mergeConfig(requestInit, init);
-
-    return {
-      hostname,
-      path,
-      headers: config.headers as http.OutgoingHttpHeaders
-    };
-  }
-
-  /**
-   * Processes the HTTP response and returns the response data.
-   * @param res - The incoming message object from the HTTP request.
-   * @returns A Promise that resolves with the response data.
-   */
-  private processResponse<R>(res: IncomingMessage): Promise<HttpResponse<R>> {
-    return new Promise((resolve, reject) => {
-      let data = '';
-
-      res.on('data', (chunk) => {
-        data += chunk;
+    if (context.body !== null && context.body !== undefined) {
+      // A Request knows how each kind of body is written, and its type:
+      // the boundary of form data, the encoding of a query
+      // (at an address of its own: the real one may hold credentials, which
+      // a Request refuses)
+      const written = new Request('http://localhost/', {
+        method,
+        headers: context.headers,
+        body: context.body
       });
 
-      res.on('end', () => {
-        const httpResponse: HttpResponse<R> = {
-          response: res,
-          status: res.statusCode
-        };
+      body = Buffer.from(await written.arrayBuffer());
+      written.headers.forEach((value, name) => (headers[name] = value));
+      headers['content-length'] = body.byteLength;
+    } else {
+      context.headers.forEach((value, name) => (headers[name] = value));
+    }
 
-        if (isHttpStatusOk(res.statusCode)) {
+    return new Promise<Response>((resolve, reject) => {
+      const request = (secure ? https : http).request(
+        url,
+        {
+          ...options.requestOptions,
+          agent:
+            (secure ? options.httpsAgent : options.httpAgent) ??
+            options.requestOptions?.agent,
+          method,
+          headers,
+          signal
+        },
+        (incoming) => {
+          const status = incoming.statusCode ?? 0;
+          const empty = method === 'HEAD' || BODILESS.has(status);
+
+          if (empty) incoming.resume();
+
           try {
-            httpResponse.payload = JSON.parse(data) as R;
-          } catch {}
+            const received = new Headers();
+
+            // Pairs, so that a header sent twice (Set-Cookie) is there twice
+            for (let i = 0; i < incoming.rawHeaders.length; i += 2) {
+              received.append(
+                incoming.rawHeaders[i],
+                incoming.rawHeaders[i + 1]
+              );
+            }
+
+            resolve(
+              new Response(
+                empty ? null : (Readable.toWeb(incoming) as ReadableStream),
+                {
+                  status,
+                  statusText: incoming.statusMessage,
+                  headers: received
+                }
+              )
+            );
+          } catch (error) {
+            // A header or a status that a Response does not take
+            incoming.destroy();
+            reject(error);
+          }
         }
+      );
 
-        resolve(httpResponse);
+      request.on('error', reject);
+      // `timeout` of requestOptions: the socket was idle for that long
+      request.on('timeout', () =>
+        request.destroy(new Error('The socket timed out'))
+      );
+      // A server that switches protocols is not answering the request
+      request.on('upgrade', (_incoming, socket) => {
+        socket.destroy();
+        reject(new Error('The server switched protocols instead of answering'));
       });
-
-      res.on('error', (err) => {
-        reject(err);
-      });
+      // Whatever else happened: a request that is over has not been answered
+      request.on('close', () =>
+        reject(new Error('The connection was closed before a response came'))
+      );
+      request.end(body);
     });
-  }
-
-  /**
-   * Sends an HTTP request using the specified method and parameters.
-   * @param method - The HTTP method (GET, POST, etc.).
-   * @param params - The request parameters.
-   * @returns A Promise that resolves with the response.
-   */
-  private sendRequest<T, R>(
-    method: string,
-    params: RequestParams<T>
-  ): Promise<HttpResponse<R>> {
-    return new Promise((resolve, reject) => {
-      const { data } = params;
-      const options = {
-        ...this.requestConfig<T>(params),
-        method
-      };
-
-      const req = http.request(options, (res: IncomingMessage) => {
-        this.processResponse<R>(res).then(resolve).catch(reject);
-      });
-
-      req.on('error', (err) => {
-        reject(new Error(`Request error: ${err.message}`));
-      });
-
-      if (data) {
-        req.write(data);
-      }
-
-      req.end();
-    });
-  }
-
-  /**
-   * Sends a GET request.
-   * @param params - The request parameters.
-   * @returns A Promise that resolves with the response.
-   */
-  public get<T = any, R = any>(
-    params: RequestParams<T>
-  ): Promise<HttpResponse<R>> {
-    return this.sendRequest<T, R>('GET', params);
-  }
-
-  /**
-   * Sends a DELETE request.
-   * @param params - The request parameters.
-   * @returns A Promise that resolves with the response.
-   */
-  public delete<T = any, R = any>(
-    params: RequestParams<T>
-  ): Promise<HttpResponse<R>> {
-    return this.sendRequest<T, R>('DELETE', params);
-  }
-
-  /**
-   * Sends a POST request.
-   * @param params - The request parameters.
-   * @returns A Promise that resolves with the response.
-   */
-  public post<T = any, R = any>(
-    params: RequestParams<T>
-  ): Promise<HttpResponse<R>> {
-    return this.sendRequest<T, R>('POST', params);
-  }
-
-  /**
-   * Sends a PUT request.
-   * @param params - The request parameters.
-   * @returns A Promise that resolves with the response.
-   */
-  public put<T = any, R = any>(
-    params: RequestParams<T>
-  ): Promise<HttpResponse<R>> {
-    return this.sendRequest<T, R>('PUT', params);
-  }
-
-  /**
-   * Sends a PATCH request.
-   * @param params - The request parameters.
-   * @returns A Promise that resolves with the response.
-   */
-  public patch<T = IPatch[], R = any>(
-    params: RequestParams<T>
-  ): Promise<HttpResponse<R>> {
-    return this.sendRequest<T, R>('PATCH', params);
-  }
-}
+  };

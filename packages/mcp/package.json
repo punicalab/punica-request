@@ -1,0 +1,53 @@
+{
+  "name": "@punica/request-mcp",
+  "version": "0.0.0",
+  "description": "MCP server for Punica Request: look up the exact API of its packages, read the rules and check code that uses them.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "http",
+    "fetch",
+    "punica"
+  ],
+  "homepage": "https://request.punicalab.com",
+  "bugs": {
+    "url": "https://github.com/punicalab/punica-request/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/punicalab/punica-request.git",
+    "directory": "packages/mcp"
+  },
+  "license": "ISC",
+  "author": "PunicaLab",
+  "type": "module",
+  "bin": {
+    "punica-request-mcp": "src/main.mjs"
+  },
+  "files": [
+    "src",
+    "bundled"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "clean": "rimraf bundled",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20.12"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@punica/request": "workspace:^",
+    "@punica/request-fetch": "workspace:^",
+    "@punica/request-http": "workspace:^",
+    "@punica/request-middleware": "workspace:^"
+  }
+}

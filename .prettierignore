@@ -1,10 +1,10 @@
 **/tests/fixtures/**/*
 **/dist
+**/bundled
 **/coverage
 **/.vscode
 .github
-package.json 
-lerna.json
+package.json
+pnpm-lock.yaml
 .prettierrc.json
-
 CHANGELOG.md

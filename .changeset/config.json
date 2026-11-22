@@ -1,0 +1,23 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@4.0.1/schema.json",
+  "changelog": [
+    "@changesets/changelog-github",
+    {
+      "repo": "punicalab/punica-request"
+    }
+  ],
+  "commit": false,
+  "fixed": [
+    [
+      "@punica/request",
+      "@punica/request-fetch",
+      "@punica/request-http",
+      "@punica/request-middleware"
+    ]
+  ],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": []
+}
