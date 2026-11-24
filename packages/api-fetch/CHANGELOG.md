@@ -1,5 +1,12 @@
 # @punica/request-fetch
 
+## 3.2.0
+
+### Patch Changes
+
+- Updated dependencies [[`cf12139`](https://github.com/punicalab/punica-request/commit/cf121393b9b8b16a7c10c47e12ed81fd408dcfa7)]:
+  - @punica/request@3.2.0
+
 ## 3.1.0
 
 ### Minor Changes
