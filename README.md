@@ -59,6 +59,10 @@ response. A request that brought no response rejects with a `RequestError`
 whose `reason` is `network`, `timeout`, `abort` or `parse`.
 `throwHttpErrors: false` gives the response back whatever its status.
 
+Code written for `fetch` keeps its shape with `toFetch(client)`: a `Response`
+for every status, its body unread, and fetch's own errors, with the
+client's middlewares on the way.
+
 ## Middlewares
 
 One list. A request passes it from the first to the last, is sent, and its

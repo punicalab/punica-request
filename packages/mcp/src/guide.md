@@ -287,6 +287,35 @@ An adapter gets the `context` and returns a Fetch `Response` for any
 status, its body unread. It rejects only when no response came. Reading
 the body, statuses and timeouts are the client's work.
 
+## Code written for fetch
+
+`toFetch(client)` is `fetch`'s shape sent through a client, for code that
+takes a `fetch` or reads a `Response` (a stream of events, a library, a
+webhook call): the client's middlewares run, and the caller sees what
+`fetch` would give.
+
+```ts
+import { createClient, toFetch } from '@punica/request';
+import { fetchAdapter } from '@punica/request-fetch';
+
+const fetch = toFetch(createClient({ adapter: fetchAdapter(), timeout: 0 }));
+
+const res = await fetch('https://hooks.example.com/run', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ id: 7 }),
+  signal: AbortSignal.timeout(10_000)
+});
+
+if (!res.ok) console.log(res.status, await res.text());
+```
+
+Every status resolves with a `Response`, its body unread (an error's body
+the client read comes back in it). An abort rejects with the signal's
+reason, a timeout with a `TimeoutError`, no answer with the adapter's own
+error. The client's `timeout` still applies: `timeout: 0` leaves the limit
+to the caller's signal, as with `fetch`.
+
 ## With a query layer
 
 The client sends; it keeps nothing of what came back. For loading and
