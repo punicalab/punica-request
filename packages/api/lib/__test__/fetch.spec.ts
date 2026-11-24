@@ -28,7 +28,9 @@ describe('toFetch', () => {
 
   it('gives every status back as a Response, with the body the server sent', async () => {
     const { adapter } = recorder(json({ error: 'nope' }, 422));
-    const res = await toFetch(createClient({ adapter }))('https://example.com/a');
+    const res = await toFetch(createClient({ adapter }))(
+      'https://example.com/a'
+    );
 
     expect(res.ok).toBe(false);
     expect(res.status).toBe(422);
@@ -40,7 +42,9 @@ describe('toFetch', () => {
     const { adapter } = recorder(
       new Response('down', { status: 503, statusText: 'Service Unavailable' })
     );
-    const res = await toFetch(createClient({ adapter }))('https://example.com/a');
+    const res = await toFetch(createClient({ adapter }))(
+      'https://example.com/a'
+    );
 
     expect(res.status).toBe(503);
     expect(res.statusText).toBe('Service Unavailable');
