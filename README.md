@@ -59,6 +59,10 @@ response. A request that brought no response rejects with a `RequestError`
 whose `reason` is `network`, `timeout`, `abort` or `parse`.
 `throwHttpErrors: false` gives the response back whatever its status.
 
+Code written for `fetch` keeps its shape with `toFetch(client)`: a `Response`
+for every status, its body unread, and fetch's own errors, with the
+client's middlewares on the way.
+
 ## Middlewares
 
 One list. A request passes it from the first to the last, is sent, and its
@@ -142,6 +146,16 @@ See [its README](./packages/mcp/README.md) for other clients and the tools.
 [`examples/registration`](./examples/registration) is a small application on
 the published packages: a client with its middlewares, and what an
 application does with it, running in a browser and in Node.
+
+## An application
+
+[punica-starter](https://github.com/punicalab/punica-starter) is a small
+application on this library together with Punica Form and Punica Components: sign in, a list, and a form
+that is created and edited, with its tests. Start one of your own from it:
+
+```bash
+npm create punica@latest my-app
+```
 
 ## Development
 
