@@ -86,6 +86,7 @@ test('search_api lists exactly the public exports', async () => {
     ['Adapter', 'type', '@punica/request'],
     ['StatusCode', 'enum', '@punica/request'],
     ['getCookie', 'const', '@punica/request'],
+    ['toFetch', 'const', '@punica/request'],
     ['fetchAdapter', 'const', '@punica/request-fetch'],
     ['httpAdapter', 'const', '@punica/request-http'],
     ['tokenAuth', 'const', '@punica/request-middleware'],
