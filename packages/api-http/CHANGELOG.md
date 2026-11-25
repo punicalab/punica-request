@@ -1,5 +1,12 @@
 # @punica/request-http
 
+## 3.2.2
+
+### Patch Changes
+
+- Updated dependencies [[`dd731a1`](https://github.com/punicalab/punica-request/commit/dd731a1d85d6632c51eb5823ba3a2b7b4c76107a)]:
+  - @punica/request@3.2.2
+
 ## 3.2.1
 
 ### Patch Changes
