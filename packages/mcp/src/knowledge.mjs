@@ -209,8 +209,38 @@ export function createKnowledge(packages) {
       });
   }
 
+  /**
+   * A type the packages declare without exporting it, as the exports that
+   * are made of it bring it along: an import of it would fail, but what it
+   * holds is part of the API.
+   */
+  function local(name) {
+    const pattern = new RegExp(
+      `^(?:declare )?(?:interface|type) ${name}\\b`,
+      'm'
+    );
+    const users = names.filter((other) =>
+      pattern.test(api.get(other).declaration)
+    );
+
+    if (!users.length) return undefined;
+
+    const source = api.get(users[0]).declaration;
+    const index = pattern.exec(source).index;
+    const declaration = [
+      commentBefore(source, index),
+      declarationAt(source, index)
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    return `## ${name} (not exported, ${api.get(users[0]).package})\n\nIt cannot be imported; it is part of ${users.join(', ')}, which can.\n\n\`\`\`ts\n${declaration}\n\`\`\``;
+  }
+
   function formatMarkdown(name) {
     const item = get(name);
+
+    if (!item && /^\w+$/.test(name) && local(name)) return local(name);
 
     if (!item) {
       return `${name} is not exported by ${packages.map((p) => p.name).join(' or ')}. Exports: ${names.join(', ')}`;
