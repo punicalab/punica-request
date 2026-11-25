@@ -1,5 +1,11 @@
 # @punica/request-mcp
 
+## 0.3.0
+
+### Minor Changes
+
+- [#106](https://github.com/punicalab/punica-request/pull/106) [`38bf720`](https://github.com/punicalab/punica-request/commit/38bf7207b1ef02e5cda1d0537288313ca0ca8bf4) Thanks [@punicalab](https://github.com/punicalab)! - The server knows Punica Request 3.2: `toFetch(client)` is in its guide and in the API it gives a project that has not installed the packages (the bundled copy was 3.1.0).
+
 ## 0.2.0
 
 ### Minor Changes
