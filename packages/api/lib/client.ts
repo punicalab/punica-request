@@ -73,6 +73,11 @@ const isResponse = (value: unknown): value is HttpResponse =>
  * const { data } = await api.get<Item[]>('items', { query: { page: 2 } });
  * ```
  *
+ * A path is joined to `baseURL` whatever slashes either has (`'items'` and
+ * `'/items'` both give `…/v1/items`, also when `baseURL` ends in `/`); a
+ * path that leads out of it is refused. `baseURL: '/api'` works in a page
+ * only.
+ *
  * A request passes the middlewares from the first to the last, is sent by
  * the adapter, and its response passes them back from the last to the
  * first. A response outside 2xx rejects with an `HttpError` once it has
