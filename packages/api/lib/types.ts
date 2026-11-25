@@ -127,7 +127,13 @@ export type Adapter = (context: RequestContext) => Promise<Response>;
 export interface ClientConfig {
   /** Sends the requests: `fetchAdapter()`, `httpAdapter()` or your own. */
   adapter: Adapter;
-  /** What every path is relative to. */
+  /**
+   * What every path is relative to. They are joined whatever slashes they
+   * have: `'https://x/v1'` with `'items'` or `'/items'` is
+   * `https://x/v1/items`. A path that leads away from it, to another origin
+   * or out of its path (`'../admin'`), is refused. A relative one (`'/api'`)
+   * works in a page only; on a server give the whole address.
+   */
   baseURL?: string | URL;
   /** Sent with every request. */
   headers?: HeadersInput;
