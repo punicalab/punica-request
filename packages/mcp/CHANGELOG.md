@@ -1,5 +1,11 @@
 # @punica/request-mcp
 
+## 0.4.0
+
+### Minor Changes
+
+- [#110](https://github.com/punicalab/punica-request/pull/110) [`272abab`](https://github.com/punicalab/punica-request/commit/272ababacf4a45502f63edaa4808921dd7548e69) Thanks [@punicalab](https://github.com/punicalab)! - `ClientConfig.baseURL` says how it and a path are joined, what is refused and where a relative one works. `get_api` answers a name the packages declare without exporting with its declaration and the exports that hold it, as form-mcp does.
+
 ## 0.3.0
 
 ### Minor Changes
