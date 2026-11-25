@@ -1,5 +1,11 @@
 # @punica/request-mcp
 
+## 0.4.1
+
+### Patch Changes
+
+- [#114](https://github.com/punicalab/punica-request/pull/114) [`dd731a1`](https://github.com/punicalab/punica-request/commit/dd731a1d85d6632c51eb5823ba3a2b7b4c76107a) Thanks [@punicalab](https://github.com/punicalab)! - `createClient` says how a path is joined to `baseURL`, so the rule is in the declaration an assistant reads first.
+
 ## 0.4.0
 
 ### Minor Changes
