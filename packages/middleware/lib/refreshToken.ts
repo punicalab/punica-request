@@ -6,7 +6,21 @@ export interface RefreshTokenOptions {
    * Gets a new token and puts it where the requests take it from. Return
    * `false` when there is none: the request is not sent again and its 401
    * is the answer. When it throws, the requests that wait reject with what
-   * it threw.
+   * it threw. What it resolves with otherwise is not used: the request sent
+   * again reads the token through `tokenAuth`, so store it where `getToken`
+   * or the cookie looks.
+   *
+   * How the server knows who asks (the old token, a cookie, a refresh token)
+   * is up to your API. With a token in a storage, sent by `tokenAuth`:
+   *
+   * ```ts
+   * refresh: async () => {
+   *   const { data } = await api.post<{ token: string }>('auth/refresh');
+   *   localStorage.setItem('token', data.token);
+   * }
+   * ```
+   *
+   * with `exclude` naming `auth/refresh`, as it goes through the same client.
    */
   refresh: () => unknown | Promise<unknown>;
   /**

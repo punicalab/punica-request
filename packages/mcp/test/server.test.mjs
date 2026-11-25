@@ -204,6 +204,55 @@ test('get_api returns the declaration with its documentation', async () => {
   );
 });
 
+test('get_api brings the option types an export takes', async () => {
+  const { call } = await connect();
+  const refresh = await call('get_api', { names: ['refreshToken'] });
+
+  assert.match(
+    refresh,
+    /## RefreshTokenOptions \(interface, what refreshToken takes, @punica\/request-middleware\)/
+  );
+  assert.match(refresh, /exclude\?: \(context: RequestContext\) => boolean;/);
+  assert.match(refresh, /localStorage\.setItem\('token', data\.token\)/);
+
+  // Handlers and the types they are made of, one level further
+  const errors = await call('get_api', { names: ['onError'] });
+
+  assert.match(errors, /## ErrorHandlers \(interface, what onError takes/);
+  assert.match(errors, /## ErrorHandler \(type, what ErrorHandlers takes/);
+
+  // A type asked for is shown once, where it was asked
+  const both = await call('get_api', {
+    names: ['tokenAuth', 'TokenAuthOptions']
+  });
+
+  assert.equal(both.match(/## TokenAuthOptions/g).length, 1);
+  assert.match(both, /## TokenAuthOptions \(interface, @punica/);
+});
+
+test('get_api appends at most four option types', () => {
+  const files = new Map([
+    [
+      'index.d.ts',
+      [
+        ...['A', 'B', 'C', 'D', 'E'].map(
+          (n) => `export interface ${n}Options { ${n.toLowerCase()}?: string }`
+        ),
+        '/** Takes all five, and names FOptions in its comment only. */',
+        'export declare function many(a: AOptions, b: BOptions, c: COptions, d: DOptions, e: EOptions): void;',
+        'export interface FOptions { f?: string }'
+      ].join('\n')
+    ]
+  ]);
+  const knowledge = createKnowledge([
+    { name: '@punica/example', version: '1.0.0', files }
+  ]);
+  const text = knowledge.formatMany(['many']);
+
+  assert.equal(text.match(/what many takes/g).length, 4);
+  assert.doesNotMatch(text, /## EOptions|## FOptions/);
+});
+
 test('validate_code names the 3.x replacement of every 2.x construct', async () => {
   const { call } = await connect();
   const lines = [
