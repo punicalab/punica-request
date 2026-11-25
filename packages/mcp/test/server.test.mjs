@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createPunicaRequestServer } from '../src/create.mjs';
+import { createKnowledge } from '../src/knowledge.mjs';
 import { loadPackage, readTypes } from '../src/load.mjs';
 
 // The type declarations the packages of this repository were built with
@@ -755,4 +756,36 @@ test('loadPackage reads the installed package, or the bundled copy', () => {
 
   assert.equal(bundled.installed, false);
   assert.ok(bundled.files.has('index.d.ts'));
+});
+
+test('a type that is not exported comes with the exports made of it', () => {
+  const files = new Map([
+    [
+      'index.d.ts',
+      [
+        '/** What the options hold. */',
+        'type Shared = { retries?: number };',
+        'export type AOptions = Shared & { a?: string };',
+        'export type BOptions = Shared & { b?: string };'
+      ].join('\n')
+    ]
+  ]);
+  const knowledge = createKnowledge([
+    { name: '@punica/example', version: '1.0.0', files }
+  ]);
+
+  assert.match(
+    knowledge.formatMarkdown('AOptions'),
+    /type Shared = \{ retries/
+  );
+
+  const local = knowledge.formatMarkdown('Shared');
+
+  assert.match(local, /## Shared \(not exported, @punica\/example\)/);
+  assert.match(local, /part of AOptions, BOptions, which can/);
+  assert.match(local, /\/\*\* What the options hold\. \*\/\ntype Shared/);
+  assert.match(
+    knowledge.formatMarkdown('Missing'),
+    /Missing is not exported by/
+  );
 });
