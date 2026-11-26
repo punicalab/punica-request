@@ -1,5 +1,11 @@
 # @punica/request-mcp
 
+## 0.6.1
+
+### Patch Changes
+
+- [#130](https://github.com/punicalab/punica-request/pull/130) [`678afe4`](https://github.com/punicalab/punica-request/commit/678afe45c463577ed2f75729461501340cf08727) Thanks [@punicalab](https://github.com/punicalab)! - The server instructions name where each import comes from, so an assistant does not read package.json exports or READMEs in node_modules to find out.
+
 ## 0.6.0
 
 ### Minor Changes
