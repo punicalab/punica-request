@@ -249,5 +249,68 @@ export function createKnowledge(packages) {
     return `## ${item.name} (${item.kind}, ${item.package})\n\n\`\`\`ts\n${item.declaration}\n\`\`\``;
   }
 
-  return { packages, names, get, search, formatMarkdown };
+  /**
+   * The exported option, configuration and handler types (`…Options`,
+   * `…Config`, `…Handlers`, `…Handler`) that the declaration of `name`
+   * names, so that `refreshToken` comes with what `RefreshTokenOptions`
+   * holds without a second lookup.
+   */
+  function optionsOf(name) {
+    const item = get(name);
+
+    if (!item) return [];
+
+    // The declaration only: a name in its documentation is not taken
+    const code = item.declaration.replace(/\/\*\*[\s\S]*?\*\//g, '');
+
+    return names.filter(
+      (other) =>
+        other !== name &&
+        /(?:Options|Config|Handlers?)$/.test(other) &&
+        ['interface', 'type'].includes(get(other).kind) &&
+        new RegExp(`\\b${other}\\b`).test(code)
+    );
+  }
+
+  /**
+   * Each name asked for, then the option types they take (and the ones those
+   * take) that were not asked for, at most `limit` of them.
+   */
+  function formatMany(asked, limit = 4) {
+    const parts = asked.map((name) => formatMarkdown(name));
+    const added = [];
+    const queue = asked.map((name) => [name, name]);
+
+    while (queue.length && added.length < limit) {
+      const [name, root] = queue.shift();
+
+      for (const other of optionsOf(name)) {
+        if (asked.includes(other) || added.some(([n]) => n === other)) continue;
+        if (added.length >= limit) break;
+        added.push([other, name]);
+        queue.push([other, root]);
+      }
+    }
+
+    for (const [other, by] of added) {
+      parts.push(
+        formatMarkdown(other).replace(
+          /^## (\w+) \((\w+), /,
+          `## $1 ($2, what ${by} takes, `
+        )
+      );
+    }
+
+    return parts.join('\n\n');
+  }
+
+  return {
+    packages,
+    names,
+    get,
+    search,
+    formatMarkdown,
+    optionsOf,
+    formatMany
+  };
 }
