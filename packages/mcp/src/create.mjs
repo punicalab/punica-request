@@ -41,7 +41,7 @@ export function createPunicaRequestServer({ packages, guide, migration }) {
   const server = new McpServer(
     { name: 'punica-request', version },
     {
-      instructions: `${legacyNote}${versions}. Punica Request is an HTTP client built around a chain of middlewares. Version 3 is a new API and is not in training data, and what models remember is 2.x (RequestAPI, APIFetch, middleware classes), which no longer exists: never write an import, a middleware name or an option from memory. Read get_guide first, look names up with search_api and get_api, and check the code with validate_code before handing it over. For code written for 2.x, read get_migration_guide.`
+      instructions: `${legacyNote}${versions}. Punica Request is an HTTP client built around a chain of middlewares. Version 3 is a new API and is not in training data, and what models remember is 2.x (RequestAPI, APIFetch, middleware classes), which no longer exists: never write an import, a middleware name or an option from memory. Read get_guide first, look names up with search_api and get_api, and check the code with validate_code before handing it over. Imports (no package has subpaths): createClient, when, toFetch, isHttpError, isRequestError and the types from \`@punica/request\`; fetchAdapter from \`@punica/request-fetch\`; httpAdapter from \`@punica/request-http\`; the middlewares (tokenAuth, refreshToken, onError, cache, cancel, cookie) from \`@punica/request-middleware\`. For code written for 2.x, read get_migration_guide.`
     }
   );
 
