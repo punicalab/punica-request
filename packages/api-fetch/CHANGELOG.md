@@ -1,5 +1,12 @@
 # @punica/request-fetch
 
+## 3.2.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @punica/request@3.2.3
+
 ## 3.2.2
 
 ### Patch Changes

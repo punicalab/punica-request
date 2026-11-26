@@ -1,5 +1,9 @@
 # @punica/request
 
+## 3.2.3
+
+No changes in this release.
+
 ## 3.2.2
 
 ### Patch Changes
