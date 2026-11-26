@@ -204,6 +204,21 @@ test('get_api returns the declaration with its documentation', async () => {
   );
 });
 
+test('get_api brings the class a type guard checks for', async () => {
+  const { call } = await connect();
+  const guard = await call('get_api', { names: ['isRequestError'] });
+
+  assert.match(guard, /## RequestError \(class, what isRequestError checks for, @punica\/request\)/);
+  assert.match(guard, /readonly reason: RequestErrorReason;/);
+  // and what the class names: the reasons
+  assert.match(guard, /## RequestErrorReason \(type, what RequestError takes/);
+  assert.match(guard, /'timeout'/);
+  assert.match(await call('get_api', { names: ['isHttpError'] }), /## HttpError \(class, what isHttpError checks for/);
+  // asked together: shown once, where it was asked
+  const both = await call('get_api', { names: ['isRequestError', 'RequestError'] });
+  assert.equal(both.match(/## RequestError \(/g).length, 1);
+});
+
 test('get_api brings the option types an export takes', async () => {
   const { call } = await connect();
   const refresh = await call('get_api', { names: ['refreshToken'] });
