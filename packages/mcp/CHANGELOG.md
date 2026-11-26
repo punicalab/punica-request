@@ -1,5 +1,11 @@
 # @punica/request-mcp
 
+## 0.5.0
+
+### Minor Changes
+
+- [#118](https://github.com/punicalab/punica-request/pull/118) [`6fcc12f`](https://github.com/punicalab/punica-request/commit/6fcc12f686c31a27d5e5d05d4805a087ccada76e) Thanks [@punicalab](https://github.com/punicalab)! - `get_api` now brings the option, configuration and handler types an export takes: `refreshToken` comes with `RefreshTokenOptions`, `onError` with `ErrorHandlers` and `ErrorHandler`, `createClient` with `ClientConfig` (at most four, none that were asked for). `RefreshTokenOptions.refresh` documents that what it resolves with is not used, and shows a refresh that stores the token for `tokenAuth`.
+
 ## 0.4.1
 
 ### Patch Changes

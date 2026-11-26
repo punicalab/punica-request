@@ -1,5 +1,13 @@
 # @punica/request-middleware
 
+## 3.2.3
+
+### Patch Changes
+
+- [#118](https://github.com/punicalab/punica-request/pull/118) [`6fcc12f`](https://github.com/punicalab/punica-request/commit/6fcc12f686c31a27d5e5d05d4805a087ccada76e) Thanks [@punicalab](https://github.com/punicalab)! - `get_api` now brings the option, configuration and handler types an export takes: `refreshToken` comes with `RefreshTokenOptions`, `onError` with `ErrorHandlers` and `ErrorHandler`, `createClient` with `ClientConfig` (at most four, none that were asked for). `RefreshTokenOptions.refresh` documents that what it resolves with is not used, and shows a refresh that stores the token for `tokenAuth`.
+- Updated dependencies []:
+  - @punica/request@3.2.3
+
 ## 3.2.2
 
 ### Patch Changes
