@@ -1,5 +1,11 @@
 # @punica/request-mcp
 
+## 0.6.0
+
+### Minor Changes
+
+- [#126](https://github.com/punicalab/punica-request/pull/126) [`93733f4`](https://github.com/punicalab/punica-request/commit/93733f4cb43c5434a87750eaeb922d334c6c0318) Thanks [@punicalab](https://github.com/punicalab)! - `get_api` of a type guard brings the class it checks for: `isRequestError` comes with `RequestError` (and its `RequestErrorReason`), `isHttpError` with `HttpError`. `…Reason` types count among the types a declaration takes.
+
 ## 0.5.1
 
 ### Patch Changes
