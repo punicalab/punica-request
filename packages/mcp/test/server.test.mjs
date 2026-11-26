@@ -853,3 +853,10 @@ test('a type that is not exported comes with the exports made of it', () => {
     /Missing is not exported by/
   );
 });
+
+test('the instructions name where each import comes from', async () => {
+  const { client } = await connect();
+  const text = client.getInstructions();
+  assert.match(text, /fetchAdapter from `@punica\/request-fetch`/);
+  assert.match(text, /refreshToken[^)]*\) from `@punica\/request-middleware`/);
+});
