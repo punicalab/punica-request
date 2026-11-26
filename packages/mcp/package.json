@@ -1,6 +1,6 @@
 {
   "name": "@punica/request-mcp",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "MCP server for Punica Request: look up the exact API of its packages, read the rules and check code that uses them.",
   "keywords": [
     "mcp",

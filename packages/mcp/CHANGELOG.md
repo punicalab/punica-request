@@ -1,5 +1,11 @@
 # @punica/request-mcp
 
+## 0.5.1
+
+### Patch Changes
+
+- [#122](https://github.com/punicalab/punica-request/pull/122) [`513a916`](https://github.com/punicalab/punica-request/commit/513a916d4396df04ad99c06896d241d3464227e0) Thanks [@punicalab](https://github.com/punicalab)! - The guide opens with where exact declarations come from: `get_api` (with the Options types a function takes), instead of the `.d.ts` files in `node_modules`.
+
 ## 0.5.0
 
 ### Minor Changes
