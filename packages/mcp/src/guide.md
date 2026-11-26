@@ -4,6 +4,11 @@ An HTTP client built around one chain of middlewares. This guide is for
 version 3. A project that still has 2.x installed has another API: read
 `get_migration_guide` before changing it.
 
+Exact declarations are one call away: `get_api` with the names
+(`refreshToken`, `tokenAuth`, `ClientConfig`) returns each one with the
+Options types it takes. Ask it instead of reading the `.d.ts` files in
+`node_modules`; `validate_code` checks the result.
+
 ## Packages
 
 | Package                      | What it exports                                                                                                                                                                                                                                                                            |
