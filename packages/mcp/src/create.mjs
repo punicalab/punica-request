@@ -105,7 +105,7 @@ export function createPunicaRequestServer({ packages, guide, migration }) {
     {
       title: 'The declaration of an export',
       description:
-        'The exact TypeScript declaration and documentation of one or more exports, such as createClient, ClientConfig, RequestOptions, RequestContext, cache or refreshToken, read from the installed packages. A function or middleware comes with the Options or Config types it takes.',
+        'The exact TypeScript declaration and documentation of one or more exports, such as createClient, ClientConfig, RequestOptions, RequestContext, cache or refreshToken, read from the installed packages. A function or middleware comes with the Options or Config types it takes; a guard such as isRequestError with the class it checks for.',
       inputSchema: {
         names: z.array(z.string()).min(1).max(12).describe('Export names')
       },

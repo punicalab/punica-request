@@ -250,10 +250,25 @@ export function createKnowledge(packages) {
   }
 
   /**
+   * The class or type a type guard checks for: `isRequestError` is
+   * `error is RequestError`, and its caller wants `reason` next.
+   */
+  function guardOf(name) {
+    const item = get(name);
+
+    if (!item) return null;
+
+    const code = item.declaration.replace(/\/\*\*[\s\S]*?\*\//g, '');
+    const target = /\bis\s+([A-Z]\w*)/.exec(code)?.[1];
+
+    return target && target !== name && names.includes(target) ? target : null;
+  }
+
+  /**
    * The exported option, configuration and handler types (`…Options`,
-   * `…Config`, `…Handlers`, `…Handler`) that the declaration of `name`
-   * names, so that `refreshToken` comes with what `RefreshTokenOptions`
-   * holds without a second lookup.
+   * `…Config`, `…Handlers`, `…Handler`, `…Reason`) that the declaration of
+   * `name` names, so that `refreshToken` comes with what
+   * `RefreshTokenOptions` holds without a second lookup.
    */
   function optionsOf(name) {
     const item = get(name);
@@ -266,15 +281,16 @@ export function createKnowledge(packages) {
     return names.filter(
       (other) =>
         other !== name &&
-        /(?:Options|Config|Handlers?)$/.test(other) &&
+        /(?:Options|Config|Handlers?|Reason)$/.test(other) &&
         ['interface', 'type'].includes(get(other).kind) &&
         new RegExp(`\\b${other}\\b`).test(code)
     );
   }
 
   /**
-   * Each name asked for, then the option types they take (and the ones those
-   * take) that were not asked for, at most `limit` of them.
+   * Each name asked for, then the type a guard among them checks for and the
+   * option types they take (and the ones those take) that were not asked
+   * for, at most `limit` of them.
    */
   function formatMany(asked, limit = 4) {
     const parts = asked.map((name) => formatMarkdown(name));
@@ -283,20 +299,25 @@ export function createKnowledge(packages) {
 
     while (queue.length && added.length < limit) {
       const [name, root] = queue.shift();
+      const guarded = guardOf(name);
+      const related = [
+        ...(guarded ? [[guarded, 'checks for']] : []),
+        ...optionsOf(name).map((other) => [other, 'takes'])
+      ];
 
-      for (const other of optionsOf(name)) {
+      for (const [other, verb] of related) {
         if (asked.includes(other) || added.some(([n]) => n === other)) continue;
         if (added.length >= limit) break;
-        added.push([other, name]);
+        added.push([other, name, verb]);
         queue.push([other, root]);
       }
     }
 
-    for (const [other, by] of added) {
+    for (const [other, by, verb] of added) {
       parts.push(
         formatMarkdown(other).replace(
           /^## (\w+) \((\w+), /,
-          `## $1 ($2, what ${by} takes, `
+          `## $1 ($2, what ${by} ${verb}, `
         )
       );
     }
@@ -311,6 +332,7 @@ export function createKnowledge(packages) {
     search,
     formatMarkdown,
     optionsOf,
+    guardOf,
     formatMany
   };
 }
